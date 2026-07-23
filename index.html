@@ -243,7 +243,7 @@
     <div class="search-grid">
         <div class="input-group full-width">
             <label for="topicInput">General Topic / Keywords</label>
-            <input type="text" id="topicInput" placeholder="e.g. IL-33, B.1.640.1, COPD" value="IL-33">
+            <input type="text" id="topicInput" placeholder="e.g. IL-33, B.1.640.1, COPD" value="COPD">
         </div>
 
         <div class="input-group full-width">
@@ -332,7 +332,7 @@ function showColumn(colKey) {
 }
 
 function formatCleanDate(paper) {
-    let rawDate = paper.pubdate || paper.sortfirstdate || "";
+    let rawDate = paper.pubdate || paper.sortfirstdate || paper.publication_date || "";
     if (!rawDate) return "N/A";
 
     const parts = rawDate.replace(/\//g, " ").replace(/-/g, " ").trim().split(/\s+/);
@@ -351,7 +351,6 @@ function formatCleanDate(paper) {
     return rawDate; 
 }
 
-// Clean text terms to handle dotted variant numbers (e.g., B.1.640.1) for PubMed
 function sanitizeTerm(str) {
     if (!str) return '';
     if (str.includes('.') && !str.startsWith('"')) {
@@ -360,7 +359,7 @@ function sanitizeTerm(str) {
     return str;
 }
 
-function buildBaseQuery() {
+function buildPubMedQuery() {
     const topic   = sanitizeTerm(document.getElementById('topicInput').value.trim());
     const title   = sanitizeTerm(document.getElementById('titleInput').value.trim());
     const journal = document.getElementById('journalInput').value.trim();
@@ -381,7 +380,7 @@ function buildBaseQuery() {
     return queryParts.join(' AND ');
 }
 
-// Helper to fetch live citation counts from NIH iCite API
+// Fetch Citation Counts via NIH iCite for PubMed
 async function fetchCitationCounts(pmids) {
     if (!pmids || pmids.length === 0) return {};
     try {
@@ -405,28 +404,27 @@ async function fetchCitationCounts(pmids) {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchAllColumns() {
-    const baseQuery = buildBaseQuery();
     const limit = parseInt(document.getElementById('limitInput').value.trim(), 10) || 10;
 
-    if (!baseQuery) {
-        document.getElementById('recentStatus').innerText = "Please fill in at least one search field.";
-        document.getElementById('cited1YStatus').innerText = "";
-        document.getElementById('citedAllStatus').innerText = "";
-        return;
-    }
-
-    await fetchRecent(baseQuery, limit);
-    await sleep(350); 
-    await fetchTopCited(baseQuery, limit, 1, 'cited1YStatus', 'cited1YResults');
-    await sleep(350);
-    await fetchTopCitedAllTime(baseQuery, limit, 'citedAllStatus', 'citedAllResults');
+    await fetchRecentPubMed(limit);
+    await sleep(300); 
+    await fetchOpenAlexTopCited(limit, 1, 'cited1YStatus', 'cited1YResults');
+    await sleep(300);
+    await fetchOpenAlexTopCited(limit, null, 'citedAllStatus', 'citedAllResults');
 }
 
-async function fetchRecent(baseQuery, limit) {
+// 1. Most Recent Feed via PubMed
+async function fetchRecentPubMed(limit) {
+    const baseQuery = buildPubMedQuery();
     const statusDiv = document.getElementById('recentStatus');
     const resultsDiv = document.getElementById('recentResults');
     statusDiv.innerText = "Loading latest papers...";
     resultsDiv.innerHTML = "";
+
+    if (!baseQuery) {
+        statusDiv.innerText = "Please fill in at least one search field.";
+        return;
+    }
 
     try {
         const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=pub_date&retmax=${limit}&retmode=json`;
@@ -441,108 +439,22 @@ async function fetchRecent(baseQuery, limit) {
             return;
         }
 
-        await renderPapers(idList, statusDiv, resultsDiv, limit, false);
-    } catch (e) {
-        console.error("Recent Papers Error:", e);
-        statusDiv.innerText = "Unable to load papers.";
-    }
-}
-
-async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
-    const statusDiv = document.getElementById(statusId);
-    const resultsDiv = document.getElementById(resultsId);
-    statusDiv.innerText = "Loading top cited papers (last 1 year)...";
-    resultsDiv.innerHTML = "";
-
-    const currentYear = new Date().getFullYear();
-    const startYear = currentYear - years;
-    const rangeQuery = `${baseQuery} AND (${startYear}:${currentYear}[DP])`;
-
-    try {
-        const fetchPoolSize = Math.max(limit * 3, 30);
-        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(rangeQuery)}&sort=relevance&retmax=${fetchPoolSize}&retmode=json`;
-        const searchRes = await fetch(searchUrl);
-        if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
-
-        const searchData = await searchRes.json();
-        const idList = searchData?.esearchresult?.idlist;
-
-        if (!idList || idList.length === 0) {
-            statusDiv.innerText = `No top cited papers found in the last year.`;
-            return;
-        }
-
-        await renderPapers(idList, statusDiv, resultsDiv, limit, true);
-    } catch (e) {
-        console.error(`Top Cited Error:`, e);
-        statusDiv.innerText = "Unable to load papers.";
-    }
-}
-
-async function fetchTopCitedAllTime(baseQuery, limit, statusId, resultsId) {
-    const statusDiv = document.getElementById(statusId);
-    const resultsDiv = document.getElementById(resultsId);
-    statusDiv.innerText = "Loading top cited papers (all time)...";
-    resultsDiv.innerHTML = "";
-
-    try {
-        const fetchPoolSize = Math.max(limit * 3, 30);
-        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=relevance&retmax=${fetchPoolSize}&retmode=json`;
-        const searchRes = await fetch(searchUrl);
-        if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
-
-        const searchData = await searchRes.json();
-        const idList = searchData?.esearchresult?.idlist;
-
-        if (!idList || idList.length === 0) {
-            statusDiv.innerText = `No top cited papers found across all time.`;
-            return;
-        }
-
-        await renderPapers(idList, statusDiv, resultsDiv, limit, true);
-    } catch (e) {
-        console.error(`Top Cited All-Time Error:`, e);
-        statusDiv.innerText = "Unable to load papers.";
-    }
-}
-
-async function renderPapers(idList, statusDiv, resultsDiv, limit, sortByImpact = false) {
-    try {
-        // Fetch PubMed Paper Summaries
         const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idList.join(',')}&retmode=json`;
         const summaryRes = await fetch(summaryUrl);
-        if (!summaryRes.ok) throw new Error(`HTTP error ${summaryRes.status}`);
-
         const summaryData = await summaryRes.json();
-
-        // Fetch Live Citation Counts from NIH iCite API
         const citationMap = await fetchCitationCounts(idList);
 
-        let papers = idList
-            .map(pmid => summaryData?.result?.[pmid])
-            .filter(paper => paper && paper.title);
-
-        // Attach citation count to each paper object
-        papers.forEach(p => {
-            p.citation_count = citationMap[p.uid] ?? 0;
-        });
-
-        // Sort by strict citation count when on Top Cited tabs
-        if (sortByImpact) {
-            papers.sort((a, b) => b.citation_count - a.citation_count);
-        }
-
-        papers = papers.slice(0, limit);
-        statusDiv.innerText = `Displaying ${papers.length} articles:`;
-
+        statusDiv.innerText = `Displaying ${idList.length} articles:`;
         const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
 
-        papers.forEach(paper => {
-            const pmid = paper.uid;
+        idList.forEach(pmid => {
+            const paper = summaryData?.result?.[pmid];
+            if (!paper) return;
+
             const cleanDate = formatCleanDate(paper);
             const authorNames = paper.authors ? paper.authors.map(a => a.name).slice(0, 5).join(', ') : 'Unknown Authors';
             const moreAuthors = (paper.authors && paper.authors.length > 5) ? ' et al.' : '';
-            const citations = paper.citation_count;
+            const citations = citationMap[pmid] ?? 0;
 
             const card = document.createElement('div');
             card.className = 'article-card';
@@ -555,7 +467,7 @@ async function renderPapers(idList, statusDiv, resultsDiv, limit, sortByImpact =
                         </a>
                     </h3>
                     <span class="citation-badge">
-                        📌 ${citations} ${citations === 1 ? 'citation' : 'citations'}
+                        📌 ${citations.toLocaleString()} ${citations === 1 ? 'citation' : 'citations'}
                     </span>
                 </div>
                 <div class="meta-info">
@@ -569,8 +481,103 @@ async function renderPapers(idList, statusDiv, resultsDiv, limit, sortByImpact =
             resultsDiv.appendChild(card);
         });
     } catch (e) {
-        console.error("Render Error:", e);
-        statusDiv.innerText = "Error retrieving paper details.";
+        console.error("Recent PubMed Error:", e);
+        statusDiv.innerText = "Unable to load papers.";
+    }
+}
+
+// 2. Top Cited Feeds via OpenAlex API (Natively sorted by cited_by_count:desc)
+async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
+    const statusDiv = document.getElementById(statusId);
+    const resultsDiv = document.getElementById(resultsId);
+    const label = yearsBack ? "last 1 year" : "all time";
+    statusDiv.innerText = `Loading top cited papers (${label})...`;
+    resultsDiv.innerHTML = "";
+
+    const topic   = document.getElementById('topicInput').value.trim();
+    const title   = document.getElementById('titleInput').value.trim();
+    const journal = document.getElementById('journalInput').value.trim();
+    const author  = document.getElementById('authorInput').value.trim();
+
+    if (!topic && !title && !journal && !author) {
+        statusDiv.innerText = "Please fill in at least one search field.";
+        return;
+    }
+
+    let filters = [];
+    if (topic) filters.push(`default.search:${encodeURIComponent(topic)}`);
+    if (title) filters.push(`title.search:${encodeURIComponent(title)}`);
+    if (journal) filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
+    if (author) filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
+
+    if (yearsBack) {
+        const currentYear = new Date().getFullYear();
+        const startYear = currentYear - yearsBack;
+        filters.push(`publication_year:${startYear}-${currentYear}`);
+    }
+
+    if (selectedPaperType === 'review') {
+        filters.push(`type:review`);
+    } else if (selectedPaperType === 'research') {
+        filters.push(`type:article`);
+    }
+
+    const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=cited_by_count:desc&per_page=${limit}`;
+
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        const works = data.results || [];
+
+        if (works.length === 0) {
+            statusDiv.innerText = `No top cited papers found (${label}).`;
+            return;
+        }
+
+        statusDiv.innerText = `Displaying top ${works.length} articles (ranked highest to lowest):`;
+        const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+
+        works.forEach(work => {
+            const titleStr = work.display_name || "Untitled Paper";
+            const citations = work.cited_by_count || 0;
+            const cleanDate = formatCleanDate(work);
+            const journalName = work.primary_location?.source?.display_name || 'N/A';
+            const url = work.doi || work.ids?.doi || work.id || "#";
+
+            let authorList = 'Unknown Authors';
+            if (work.authorships && work.authorships.length > 0) {
+                const names = work.authorships.map(a => a.author?.display_name).filter(Boolean);
+                authorList = names.slice(0, 5).join(', ') + (names.length > 5 ? ' et al.' : '');
+            }
+
+            const card = document.createElement('div');
+            card.className = 'article-card';
+            card.innerHTML = `
+                <div class="article-title-row">
+                    <h3 class="article-title">
+                        <a href="${url}" target="_blank" rel="noopener">
+                            <span>${titleStr}</span>
+                            ${externalIconSvg}
+                        </a>
+                    </h3>
+                    <span class="citation-badge">
+                        📌 ${citations.toLocaleString()} ${citations === 1 ? 'citation' : 'citations'}
+                    </span>
+                </div>
+                <div class="meta-info">
+                    <strong>Journal:</strong> ${journalName} &bull; 
+                    <strong>Published:</strong> ${cleanDate}
+                </div>
+                <div class="authors">
+                    <strong>Authors:</strong> ${authorList}
+                </div>
+            `;
+            resultsDiv.appendChild(card);
+        });
+    } catch (e) {
+        console.error("OpenAlex Fetch Error:", e);
+        statusDiv.innerText = "Unable to load papers from OpenAlex.";
     }
 }
 
