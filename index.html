@@ -486,7 +486,7 @@ async function fetchRecentPubMed(limit) {
     }
 }
 
-// 2. Top Cited Feeds via OpenAlex API (Natively sorted by cited_by_count:desc)
+// 2. Top Cited Feeds via OpenAlex API (Strict Title/Abstract Matching)
 async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
@@ -505,7 +505,9 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     }
 
     let filters = [];
-    if (topic) filters.push(`default.search:${encodeURIComponent(topic)}`);
+    
+    // Strict title & abstract matching instead of default broad concept search
+    if (topic) filters.push(`title_and_abstract.search:${encodeURIComponent(topic)}`);
     if (title) filters.push(`title.search:${encodeURIComponent(title)}`);
     if (journal) filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
     if (author) filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
