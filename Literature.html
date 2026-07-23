@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Article Dashboard</title>
+    <style>
+        :root {
+            --bg-main: #f1f3f5;
+            --bg-card: #ffffff;
+            --primary-blue: #0f172a;
+            --accent-blue: #1e3a8a;
+            --light-blue: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--primary-blue);
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: var(--text-muted);
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        /* Search Grid */
+        .search-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            margin-bottom: 24px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .input-group.full-width {
+            grid-column: span 2;
+        }
+        label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #f8fafc;
+            color: var(--text-dark);
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            background-color: #fff;
+        }
+
+        /* Paper Type & View Mode Button Groups */
+        .toggle-group {
+            display: flex;
+            gap: 6px;
+            margin-top: 2px;
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 9px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .toggle-btn:hover {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        .toggle-btn.active {
+            background-color: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .button-container {
+            grid-column: span 2;
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        .btn-submit {
+            padding: 10px 24px;
+            font-size: 15px;
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: var(--accent-blue);
+        }
+
+        /* Column Visibility Switch */
+        .column-content {
+            display: none;
+        }
+        .column-content.active {
+            display: block;
+        }
+
+        /* Article Cards */
+        .article-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: transform 0.15s ease;
+        }
+        .article-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-blue);
+        }
+        .article-title {
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+        }
+        .article-title a {
+            color: var(--accent-blue);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .article-title a:hover {
+            text-decoration: underline;
+        }
+
+        .external-icon {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            flex-shrink: 0;
+        }
+
+        .meta-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .authors {
+            font-size: 13px;
+            color: var(--text-dark);
+            font-style: italic;
+        }
+        .status-msg {
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 600px) {
+            .search-grid {
+                grid-template-columns: 1fr;
+            }
+            .input-group.full-width, .button-container {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Research Article Dashboard</h1>
+    <p class="subtitle">Real-time paper feed organized by recency and 1-year citation impact.</p>
+
+    <!-- Menu / Search Control Panel -->
+    <div class="search-grid">
+        <div class="input-group full-width">
+            <label for="topicInput">General Topic / Keywords</label>
+            <input type="text" id="topicInput" placeholder="e.g. IL-33, HRV-16, COPD" value="IL-33">
+        </div>
+
+        <div class="input-group full-width">
+            <label>Paper Type Filter</label>
+            <div class="toggle-group">
+                <button type="button" id="typeAll" class="toggle-btn active" onclick="setPaperType('all')">All Types</button>
+                <button type="button" id="typeResearch" class="toggle-btn" onclick="setPaperType('research')">Research Papers</button>
+                <button type="button" id="typeReview" class="toggle-btn" onclick="setPaperType('review')">Review Papers</button>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="titleInput">Title Keywords (Optional)</label>
+            <input type="text" id="titleInput" placeholder="e.g. Rhinovirus, Inflammation">
+        </div>
+
+        <div class="input-group">
+            <label for="journalInput">Journal Name</label>
+            <input type="text" id="journalInput" placeholder="e.g. Nature, Thorax">
+        </div>
+
+        <div class="input-group">
+            <label for="authorInput">Author Name</label>
+            <input type="text" id="authorInput" placeholder="e.g. Johnston SL">
+        </div>
+
+        <div class="input-group">
+            <label for="limitInput">Max Results</label>
+            <input type="text" id="limitInput" value="10">
+        </div>
+
+        <!-- Extra Row at bottom of menu for Most Recent / Top Cited Toggle -->
+        <div class="input-group full-width">
+            <label>Sort / Feed Mode</label>
+            <div class="toggle-group">
+                <button type="button" id="feedRecent" class="toggle-btn active" onclick="showColumn('recent')">⚡ Most Recent</button>
+                <button type="button" id="feedCited1Y" class="toggle-btn" onclick="showColumn('cited1Y')">🔥 Top Cited (Last 1 Year)</button>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button class="btn-submit" onclick="fetchAllColumns()">Fetch Articles</button>
+        </div>
+    </div>
+
+    <!-- Column 1: Most Recent -->
+    <div id="col-recent" class="column-content active">
+        <div id="recentStatus" class="status-msg"></div>
+        <div id="recentResults"></div>
+    </div>
+
+    <!-- Column 2: Top Cited (Last Year) -->
+    <div id="col-cited1Y" class="column-content">
+        <div id="cited1YStatus" class="status-msg"></div>
+        <div id="cited1YResults"></div>
+    </div>
+
+</div>
+
+<script>
+let selectedPaperType = 'all';
+
+function setPaperType(type) {
+    selectedPaperType = type;
+    document.getElementById('typeAll').classList.toggle('active', type === 'all');
+    document.getElementById('typeResearch').classList.toggle('active', type === 'research');
+    document.getElementById('typeReview').classList.toggle('active', type === 'review');
+    fetchAllColumns();
+}
+
+function showColumn(colKey) {
+    ['recent', 'cited1Y'].forEach(key => {
+        document.getElementById(`col-${key}`).classList.remove('active');
+    });
+
+    document.getElementById('feedRecent').classList.toggle('active', colKey === 'recent');
+    document.getElementById('feedCited1Y').classList.toggle('active', colKey === 'cited1Y');
+    document.getElementById(`col-${colKey}`).classList.add('active');
+}
+
+function formatCleanDate(paper) {
+    let rawDate = paper.pubdate || paper.sortfirstdate || "";
+    if (!rawDate) return "N/A";
+
+    const parts = rawDate.replace(/\//g, " ").replace(/-/g, " ").trim().split(/\s+/);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    let year = parts.find(p => /^\d{4}$/.test(p));
+    let month = parts.find(p => months.some(m => p.toLowerCase().startsWith(m.toLowerCase())));
+
+    if (month && year) {
+        const formattedMonth = month.charAt(0).toUpperCase() + month.slice(1, 3).toLowerCase();
+        return `${formattedMonth} ${year}`;
+    } else if (year) {
+        return year;
+    }
+
+    return rawDate; 
+}
+
+function buildBaseQuery() {
+    const topic   = document.getElementById('topicInput').value.trim();
+    const title   = document.getElementById('titleInput').value.trim();
+    const journal = document.getElementById('journalInput').value.trim();
+    const author  = document.getElementById('authorInput').value.trim();
+
+    let queryParts = [];
+    if (topic)   queryParts.push(`${topic}[Title/Abstract]`);
+    if (title)   queryParts.push(`${title}[Title]`);
+    if (journal) queryParts.push(`${journal}[Journal]`);
+    if (author)  queryParts.push(`${author}[Author]`);
+
+    if (selectedPaperType === 'review') {
+        queryParts.push(`review[PT]`);
+    } else if (selectedPaperType === 'research') {
+        queryParts.push(`(journal article[PT] NOT review[PT])`);
+    }
+
+    return queryParts.join(' AND ');
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchAllColumns() {
+    const baseQuery = buildBaseQuery();
+    const limit = document.getElementById('limitInput').value.trim() || '10';
+
+    if (!baseQuery) {
+        document.getElementById('recentStatus').innerText = "Please fill in at least one search field.";
+        document.getElementById('cited1YStatus').innerText = "";
+        return;
+    }
+
+    await fetchRecent(baseQuery, limit);
+    await sleep(350); 
+    await fetchTopCited(baseQuery, limit, 1, 'cited1YStatus', 'cited1YResults');
+}
+
+async function fetchRecent(baseQuery, limit) {
+    const statusDiv = document.getElementById('recentStatus');
+    const resultsDiv = document.getElementById('recentResults');
+    statusDiv.innerText = "Loading latest papers...";
+    resultsDiv.innerHTML = "";
+
+    try {
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=pub_date&retmax=${limit}&retmode=json`;
+        const searchRes = await fetch(searchUrl);
+        if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
+
+        const searchData = await searchRes.json();
+        const idList = searchData?.esearchresult?.idlist;
+
+        if (!idList || idList.length === 0) {
+            statusDiv.innerText = "No recent papers found matching your filters.";
+            return;
+        }
+
+        await renderPapers(idList, statusDiv, resultsDiv);
+    } catch (e) {
+        console.error("Recent Papers Error:", e);
+        statusDiv.innerText = "Unable to load papers.";
+    }
+}
+
+async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
+    const statusDiv = document.getElementById(statusId);
+    const resultsDiv = document.getElementById(resultsId);
+    statusDiv.innerText = "Loading top cited papers...";
+    resultsDiv.innerHTML = "";
+
+    const currentYear = new Date().getFullYear();
+    const startYear = currentYear - years;
+    const rangeQuery = `${baseQuery} AND (${startYear}:${currentYear}[DP])`;
+
+    try {
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(rangeQuery)}&sort=relevance&retmax=${limit}&retmode=json`;
+        const searchRes = await fetch(searchUrl);
+        if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
+
+        const searchData = await searchRes.json();
+        const idList = searchData?.esearchresult?.idlist;
+
+        if (!idList || idList.length === 0) {
+            statusDiv.innerText = `No top cited papers found in the last year.`;
+            return;
+        }
+
+        await renderPapers(idList, statusDiv, resultsDiv);
+    } catch (e) {
+        console.error(`Top Cited Error:`, e);
+        statusDiv.innerText = "Unable to load papers.";
+    }
+}
+
+async function renderPapers(idList, statusDiv, resultsDiv) {
+    try {
+        const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idList.join(',')}&retmode=json`;
+        const summaryRes = await fetch(summaryUrl);
+        if (!summaryRes.ok) throw new Error(`HTTP error ${summaryRes.status}`);
+
+        const summaryData = await summaryRes.json();
+        statusDiv.innerText = `Displaying ${idList.length} articles:`;
+
+        const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+
+        idList.forEach(pmid => {
+            const paper = summaryData?.result?.[pmid];
+            if (!paper) return;
+
+            const cleanDate = formatCleanDate(paper);
+            const authorNames = paper.authors ? paper.authors.map(a => a.name).slice(0, 5).join(', ') : 'Unknown Authors';
+            const moreAuthors = (paper.authors && paper.authors.length > 5) ? ' et al.' : '';
+
+            const card = document.createElement('div');
+            card.className = 'article-card';
+            card.innerHTML = `
+                <h3 class="article-title">
+                    <a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}/" target="_blank" rel="noopener">
+                        <span>${paper.title}</span>
+                        ${externalIconSvg}
+                    </a>
+                </h3>
+                <div class="meta-info">
+                    <strong>Journal:</strong> ${paper.source || 'N/A'} &bull; 
+                    <strong>Published:</strong> ${cleanDate}
+                </div>
+                <div class="authors">
+                    <strong>Authors:</strong> ${authorNames}${moreAuthors}
+                </div>
+            `;
+            resultsDiv.appendChild(card);
+        });
+    } catch (e) {
+        console.error("Render Error:", e);
+        statusDiv.innerText = "Error retrieving paper details.";
+    }
+}
+
+window.onload = fetchAllColumns;
+</script>
+
+</body>
+</html>
