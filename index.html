@@ -413,6 +413,29 @@ async function fetchAllColumns() {
     await fetchOpenAlexTopCited(limit, null, 'citedAllStatus', 'citedAllResults');
 }
 
+// Helper to reconstruct abstract from OpenAlex inverted index
+function getAbstractFromInvertedIndex(invertedIndex) {
+    if (!invertedIndex) return '';
+    try {
+        let maxPos = -1;
+        for (let word in invertedIndex) {
+            for (let pos of invertedIndex[word]) {
+                if (pos > maxPos) maxPos = pos;
+            }
+        }
+        if (maxPos === -1) return '';
+        let words = new Array(maxPos + 1);
+        for (let word in invertedIndex) {
+            for (let pos of invertedIndex[word]) {
+                words[pos] = word;
+            }
+        }
+        return words.join(' ');
+    } catch (e) {
+        return '';
+    }
+}
+
 // 1. Most Recent Feed via PubMed
 async function fetchRecentPubMed(limit) {
     const baseQuery = buildPubMedQuery();
@@ -486,7 +509,7 @@ async function fetchRecentPubMed(limit) {
     }
 }
 
-// 2. Top Cited Feeds via OpenAlex API (Strict Title/Abstract Matching)
+// 2. Top Cited Feeds via OpenAlex API (With Enforced Exact Term Filtering)
 async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
@@ -506,9 +529,15 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
 
     let filters = [];
     
-    // Strict title & abstract matching instead of default broad concept search
-    if (topic) filters.push(`title_and_abstract.search:${encodeURIComponent(topic)}`);
-    if (title) filters.push(`title.search:${encodeURIComponent(title)}`);
+    // Wrap topic in explicit quotes for exact OpenAlex search matching
+    if (topic) {
+        const queryTopic = topic.startsWith('"') ? topic : `"${topic}"`;
+        filters.push(`title_and_abstract.search:${encodeURIComponent(queryTopic)}`);
+    }
+    if (title) {
+        const queryTitle = title.startsWith('"') ? title : `"${title}"`;
+        filters.push(`title.search:${encodeURIComponent(queryTitle)}`);
+    }
     if (journal) filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
     if (author) filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
 
@@ -524,13 +553,28 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
         filters.push(`type:article`);
     }
 
-    const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=cited_by_count:desc&per_page=${limit}`;
+    // Fetch extra items (up to 50) so we can strictly filter client-side without under-filling
+    const fetchLimit = Math.max(limit * 3, 30);
+    const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=cited_by_count:desc&per_page=${fetchLimit}`;
 
     try {
         const res = await fetch(apiUrl);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
-        const works = data.results || [];
+        let works = data.results || [];
+
+        // Client-side strict filter guard: ensure the keyword actually appears in title or abstract
+        if (topic) {
+            const cleanTopic = topic.replace(/"/g, '').toLowerCase();
+            works = works.filter(work => {
+                const titleText = (work.display_name || "").toLowerCase();
+                const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index).toLowerCase();
+                return titleText.includes(cleanTopic) || abstractText.includes(cleanTopic);
+            });
+        }
+
+        // Limit results to user specified amount
+        works = works.slice(0, limit);
 
         if (works.length === 0) {
             statusDiv.innerText = `No top cited papers found (${label}).`;
