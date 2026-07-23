@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Research Article Dashboard</title>
+
+    <!-- Custom iPhone Home Screen Icon -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/microscope.png">
+
     <style>
         :root {
             --bg-main: #f1f3f5;
@@ -198,6 +202,9 @@
             .input-group.full-width, .button-container {
                 grid-column: span 1;
             }
+            .toggle-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -205,7 +212,7 @@
 
 <div class="container">
     <h1>Research Article Dashboard</h1>
-    <p class="subtitle">Real-time paper feed organized by recency and 1-year citation impact.</p>
+    <p class="subtitle">Real-time paper feed organized by recency and citation impact.</p>
 
     <!-- Menu / Search Control Panel -->
     <div class="search-grid">
@@ -243,12 +250,13 @@
             <input type="text" id="limitInput" value="10">
         </div>
 
-        <!-- Extra Row at bottom of menu for Most Recent / Top Cited Toggle -->
+        <!-- Extra Row at bottom of menu for Feed Mode Toggles -->
         <div class="input-group full-width">
             <label>Sort / Feed Mode</label>
             <div class="toggle-group">
                 <button type="button" id="feedRecent" class="toggle-btn active" onclick="showColumn('recent')">⚡ Most Recent</button>
                 <button type="button" id="feedCited1Y" class="toggle-btn" onclick="showColumn('cited1Y')">🔥 Top Cited (Last 1 Year)</button>
+                <button type="button" id="feedCitedAll" class="toggle-btn" onclick="showColumn('citedAll')">🏆 Top Cited (All Time)</button>
             </div>
         </div>
 
@@ -269,6 +277,12 @@
         <div id="cited1YResults"></div>
     </div>
 
+    <!-- Column 3: Top Cited (All Time) -->
+    <div id="col-citedAll" class="column-content">
+        <div id="citedAllStatus" class="status-msg"></div>
+        <div id="citedAllResults"></div>
+    </div>
+
 </div>
 
 <script>
@@ -283,12 +297,14 @@ function setPaperType(type) {
 }
 
 function showColumn(colKey) {
-    ['recent', 'cited1Y'].forEach(key => {
+    ['recent', 'cited1Y', 'citedAll'].forEach(key => {
         document.getElementById(`col-${key}`).classList.remove('active');
     });
 
     document.getElementById('feedRecent').classList.toggle('active', colKey === 'recent');
     document.getElementById('feedCited1Y').classList.toggle('active', colKey === 'cited1Y');
+    document.getElementById('feedCitedAll').classList.toggle('active', colKey === 'citedAll');
+    
     document.getElementById(`col-${colKey}`).classList.add('active');
 }
 
@@ -342,12 +358,15 @@ async function fetchAllColumns() {
     if (!baseQuery) {
         document.getElementById('recentStatus').innerText = "Please fill in at least one search field.";
         document.getElementById('cited1YStatus').innerText = "";
+        document.getElementById('citedAllStatus').innerText = "";
         return;
     }
 
     await fetchRecent(baseQuery, limit);
     await sleep(350); 
     await fetchTopCited(baseQuery, limit, 1, 'cited1YStatus', 'cited1YResults');
+    await sleep(350);
+    await fetchTopCitedAllTime(baseQuery, limit, 'citedAllStatus', 'citedAllResults');
 }
 
 async function fetchRecent(baseQuery, limit) {
@@ -379,7 +398,7 @@ async function fetchRecent(baseQuery, limit) {
 async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
-    statusDiv.innerText = "Loading top cited papers...";
+    statusDiv.innerText = "Loading top cited papers (last 1 year)...";
     resultsDiv.innerHTML = "";
 
     const currentYear = new Date().getFullYear();
@@ -402,6 +421,32 @@ async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
         await renderPapers(idList, statusDiv, resultsDiv);
     } catch (e) {
         console.error(`Top Cited Error:`, e);
+        statusDiv.innerText = "Unable to load papers.";
+    }
+}
+
+async function fetchTopCitedAllTime(baseQuery, limit, statusId, resultsId) {
+    const statusDiv = document.getElementById(statusId);
+    const resultsDiv = document.getElementById(resultsId);
+    statusDiv.innerText = "Loading top cited papers (all time)...";
+    resultsDiv.innerHTML = "";
+
+    try {
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=relevance&retmax=${limit}&retmode=json`;
+        const searchRes = await fetch(searchUrl);
+        if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
+
+        const searchData = await searchRes.json();
+        const idList = searchData?.esearchresult?.idlist;
+
+        if (!idList || idList.length === 0) {
+            statusDiv.innerText = `No top cited papers found across all time.`;
+            return;
+        }
+
+        await renderPapers(idList, statusDiv, resultsDiv);
+    } catch (e) {
+        console.error(`Top Cited All-Time Error:`, e);
         statusDiv.innerText = "Unable to load papers.";
     }
 }
