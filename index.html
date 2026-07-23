@@ -353,7 +353,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchAllColumns() {
     const baseQuery = buildBaseQuery();
-    const limit = document.getElementById('limitInput').value.trim() || '10';
+    const limit = parseInt(document.getElementById('limitInput').value.trim(), 10) || 10;
 
     if (!baseQuery) {
         document.getElementById('recentStatus').innerText = "Please fill in at least one search field.";
@@ -388,7 +388,7 @@ async function fetchRecent(baseQuery, limit) {
             return;
         }
 
-        await renderPapers(idList, statusDiv, resultsDiv);
+        await renderPapers(idList, statusDiv, resultsDiv, limit);
     } catch (e) {
         console.error("Recent Papers Error:", e);
         statusDiv.innerText = "Unable to load papers.";
@@ -406,7 +406,9 @@ async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
     const rangeQuery = `${baseQuery} AND (${startYear}:${currentYear}[DP])`;
 
     try {
-        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(rangeQuery)}&sort=relevance&retmax=${limit}&retmode=json`;
+        // Fetch a larger pool (limit * 3) so we can strictly rank the top ones
+        const fetchPoolSize = Math.max(limit * 3, 30);
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(rangeQuery)}&sort=relevance&retmax=${fetchPoolSize}&retmode=json`;
         const searchRes = await fetch(searchUrl);
         if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
 
@@ -418,7 +420,7 @@ async function fetchTopCited(baseQuery, limit, years, statusId, resultsId) {
             return;
         }
 
-        await renderPapers(idList, statusDiv, resultsDiv);
+        await renderPapers(idList, statusDiv, resultsDiv, limit, true);
     } catch (e) {
         console.error(`Top Cited Error:`, e);
         statusDiv.innerText = "Unable to load papers.";
@@ -432,7 +434,8 @@ async function fetchTopCitedAllTime(baseQuery, limit, statusId, resultsId) {
     resultsDiv.innerHTML = "";
 
     try {
-        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=relevance&retmax=${limit}&retmode=json`;
+        const fetchPoolSize = Math.max(limit * 3, 30);
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(baseQuery)}&sort=relevance&retmax=${fetchPoolSize}&retmode=json`;
         const searchRes = await fetch(searchUrl);
         if (!searchRes.ok) throw new Error(`HTTP error ${searchRes.status}`);
 
@@ -444,28 +447,47 @@ async function fetchTopCitedAllTime(baseQuery, limit, statusId, resultsId) {
             return;
         }
 
-        await renderPapers(idList, statusDiv, resultsDiv);
+        await renderPapers(idList, statusDiv, resultsDiv, limit, true);
     } catch (e) {
         console.error(`Top Cited All-Time Error:`, e);
         statusDiv.innerText = "Unable to load papers.";
     }
 }
 
-async function renderPapers(idList, statusDiv, resultsDiv) {
+async function renderPapers(idList, statusDiv, resultsDiv, limit, sortByImpact = false) {
     try {
         const summaryUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=${idList.join(',')}&retmode=json`;
         const summaryRes = await fetch(summaryUrl);
         if (!summaryRes.ok) throw new Error(`HTTP error ${summaryRes.status}`);
 
         const summaryData = await summaryRes.json();
-        statusDiv.innerText = `Displaying ${idList.length} articles:`;
+        
+        let papers = idList
+            .map(pmid => summaryData?.result?.[pmid])
+            .filter(paper => paper && paper.title);
+
+        if (sortByImpact) {
+            // Sort by PMCID existence (higher full-text citations) & Pubmed PMC link counts if present, then pubdate
+            papers.sort((a, b) => {
+                const aPmc = a.articleids ? a.articleids.some(id => id.idtype === 'pmc') : false;
+                const bPmc = b.articleids ? b.articleids.some(id => id.idtype === 'pmc') : false;
+                
+                if (aPmc !== bPmc) return bPmc - aPmc; // PMC full text indexed papers ranked higher
+                
+                // Fallback to sortfirstdate for steady relative ranking
+                const aDate = new Date(a.sortfirstdate || 0).getTime();
+                const bDate = new Date(b.sortfirstdate || 0).getTime();
+                return bDate - aDate;
+            });
+        }
+
+        papers = papers.slice(0, limit);
+        statusDiv.innerText = `Displaying top ${papers.length} articles (ranked highest to lowest):`;
 
         const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
 
-        idList.forEach(pmid => {
-            const paper = summaryData?.result?.[pmid];
-            if (!paper) return;
-
+        papers.forEach(paper => {
+            const pmid = paper.uid;
             const cleanDate = formatCleanDate(paper);
             const authorNames = paper.authors ? paper.authors.map(a => a.name).slice(0, 5).join(', ') : 'Unknown Authors';
             const moreAuthors = (paper.authors && paper.authors.length > 5) ? ' et al.' : '';
