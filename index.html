@@ -615,20 +615,47 @@ function getAbstractFromInvertedIndex(invertedIndex) {
     }
 }
 
-// Extract a clean 1-sentence summary from abstract text
-function extractOneSentenceSummary(abstractText) {
+// OPTION 2: Upgraded Heuristic Takeaway Engine
+// Scans abstract for core conclusions/findings rather than just taking sentence #1
+function extractGeminiTakeaway(abstractText) {
     if (!abstractText || abstractText.trim().length === 0) {
         return "Summary unavailable for this paper.";
     }
+
     const cleanText = abstractText.trim();
-    const match = cleanText.match(/^[^.!?]+[.!?]/);
-    if (match) {
-        return match[0];
+    // Split text into individual sentences accurately
+    const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+
+    // Priority conclusion triggers in scientific abstracts
+    const conclusionTriggers = [
+        "conclude that", "demonstrate that", "demonstrated that", "show that", 
+        "showed that", "suggest that", "suggests that", "found that", 
+        "results indicate", "results show", "findings indicate", "in conclusion", 
+        "overall,", "taken together", "we identified", "our data suggest"
+    ];
+
+    // 1. First Pass: Search for high-value conclusion sentences
+    for (let sentence of sentences) {
+        const lower = sentence.toLowerCase();
+        if (conclusionTriggers.some(trigger => lower.includes(trigger))) {
+            return sentence.trim();
+        }
     }
-    return cleanText.slice(0, 150) + "...";
+
+    // 2. Second Pass: Scientific conclusions almost always sit at the end of the abstract
+    if (sentences.length > 1) {
+        const lastSentence = sentences[sentences.length - 1].trim();
+        // Return last sentence if it is reasonably informative (> 25 characters)
+        if (lastSentence.length > 25) {
+            return lastSentence;
+        }
+    }
+
+    // 3. Fallback: Return first sentence if no conclusions found
+    return sentences[0].trim();
 }
 
-// 1. Most Recent Feed via PubMed (With XML Abstract & First Author Institution)
+// 1. Most Recent Feed via PubMed
 async function fetchRecentPubMed(limit) {
     const baseQuery = buildPubMedQuery();
     const statusDiv = document.getElementById('recentStatus');
@@ -655,7 +682,6 @@ async function fetchRecentPubMed(limit) {
             return;
         }
 
-        // Fetch XML records to retrieve full abstracts & affiliations
         const fetchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${idList.join(',')}&retmode=xml`;
         const fetchRes = await fetch(fetchUrl);
         const xmlText = await fetchRes.text();
@@ -693,17 +719,16 @@ async function fetchRecentPubMed(limit) {
                 }).filter(Boolean);
                 authorNames = names.slice(0, 5).join(', ') + (names.length > 5 ? ' et al.' : '');
 
-                // First Author Institution
                 const firstAuthorAff = authorEls[0].querySelector("AffiliationInfo Affiliation")?.textContent || "";
                 if (firstAuthorAff) {
                     firstInstitution = firstAuthorAff.replace(/\.$/, '');
                 }
             }
 
-            // Extract Abstract
+            // Extract Abstract & Generate Smart Takeaway
             const abstractEls = art.querySelectorAll("AbstractText");
             let abstractText = Array.from(abstractEls).map(a => a.textContent).join(" ");
-            const summaryStr = extractOneSentenceSummary(abstractText);
+            const summaryStr = extractGeminiTakeaway(abstractText);
 
             const citations = citationMap[pmid] ?? 0;
 
@@ -742,7 +767,7 @@ async function fetchRecentPubMed(limit) {
     }
 }
 
-// 2. Top Cited Feeds via OpenAlex API (With First Author Institution & 1-Sentence Summary)
+// 2. Top Cited Feeds via OpenAlex API
 async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
@@ -794,7 +819,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
         const data = await res.json();
         let works = data.results || [];
 
-        // Client-side strict filter guard: ensure keyword appears in title or abstract
         if (topic) {
             const cleanTopic = topic.replace(/"/g, '').toLowerCase();
             works = works.filter(work => {
@@ -824,7 +848,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
             const url = work.doi || work.ids?.doi || work.id || "#";
 
             const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
-            const summaryStr = extractOneSentenceSummary(abstractText);
+            const summaryStr = extractGeminiTakeaway(abstractText);
 
             let authorList = 'Unknown Authors';
             let firstInstitution = 'N/A';
@@ -833,7 +857,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                 const names = work.authorships.map(a => a.author?.display_name).filter(Boolean);
                 authorList = names.slice(0, 5).join(', ') + (names.length > 5 ? ' et al.' : '');
 
-                // First Author Institution Extraction
                 const firstAuthorship = work.authorships[0];
                 if (firstAuthorship?.institutions && firstAuthorship.institutions.length > 0) {
                     firstInstitution = firstAuthorship.institutions.map(inst => inst.display_name).join(', ');
