@@ -14,6 +14,8 @@
             --primary-blue: #0f172a;
             --accent-blue: #2563eb;
             --accent-light: #eff6ff;
+            --gemini-purple: #6366f1;
+            --gemini-bg: #f5f3ff;
             --border-color: #e2e8f0;
             --text-dark: #0f172a;
             --text-muted: #64748b;
@@ -309,19 +311,22 @@
             margin-bottom: 10px;
         }
 
+        /* Gemini Summary Callout Box */
         .paper-summary {
             font-size: 13px;
             line-height: 1.5;
             color: #334155;
-            background-color: #f8fafc;
+            background-color: var(--gemini-bg);
             padding: 10px 14px;
-            border-left: 3px solid var(--accent-blue);
+            border-left: 3px solid var(--gemini-purple);
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .paper-summary strong {
-            color: var(--primary-blue);
+            color: #4338ca;
+            display: inline-block;
+            margin-bottom: 2px;
         }
 
         .status-msg {
@@ -725,7 +730,7 @@ async function fetchRecentPubMed(limit) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>Summary:</strong> ${summaryStr}
+                    <strong>✨ Gemini Summary:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
@@ -860,7 +865,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>Summary:</strong> ${summaryStr}
+                    <strong>✨ Gemini Summary:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
