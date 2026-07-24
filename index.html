@@ -14,8 +14,8 @@
             --primary-blue: #0f172a;
             --accent-blue: #2563eb;
             --accent-light: #eff6ff;
-            --gemini-purple: #6366f1;
-            --gemini-bg: #f5f3ff;
+            --summary-purple: #6366f1;
+            --summary-bg: #f5f3ff;
             --border-color: #e2e8f0;
             --text-dark: #0f172a;
             --text-muted: #64748b;
@@ -311,14 +311,14 @@
             margin-bottom: 10px;
         }
 
-        /* Gemini Summary Callout Box */
+        /* Summary Callout Box */
         .paper-summary {
             font-size: 13px;
             line-height: 1.5;
             color: #334155;
-            background-color: var(--gemini-bg);
+            background-color: var(--summary-bg);
             padding: 10px 14px;
-            border-left: 3px solid var(--gemini-purple);
+            border-left: 3px solid var(--summary-purple);
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
             margin-top: 10px;
         }
@@ -615,16 +615,22 @@ function getAbstractFromInvertedIndex(invertedIndex) {
     }
 }
 
-// OPTION 2: Upgraded Heuristic Takeaway Engine
-// Scans abstract for core conclusions/findings rather than just taking sentence #1
-function extractGeminiTakeaway(abstractText) {
+// Upgraded Heuristic Takeaway Engine (Handles species names & abbreviations gracefully)
+function extractTakeaway(abstractText) {
     if (!abstractText || abstractText.trim().length === 0) {
         return "Summary unavailable for this paper.";
     }
 
     const cleanText = abstractText.trim();
-    // Split text into individual sentences accurately
-    const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
+
+    // Split sentences without getting tricked by species names/abbreviations like "G. dahurica" or "et al."
+    // Split only when a period/exclamation/question is followed by whitespace AND a capital letter.
+    const sentences = cleanText
+        .split(/(?<=[.!?])\s+(?=[A-Z])/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+    if (sentences.length === 0) return cleanText;
 
     // Priority conclusion triggers in scientific abstracts
     const conclusionTriggers = [
@@ -638,21 +644,20 @@ function extractGeminiTakeaway(abstractText) {
     for (let sentence of sentences) {
         const lower = sentence.toLowerCase();
         if (conclusionTriggers.some(trigger => lower.includes(trigger))) {
-            return sentence.trim();
+            return sentence;
         }
     }
 
     // 2. Second Pass: Scientific conclusions almost always sit at the end of the abstract
     if (sentences.length > 1) {
-        const lastSentence = sentences[sentences.length - 1].trim();
-        // Return last sentence if it is reasonably informative (> 25 characters)
+        const lastSentence = sentences[sentences.length - 1];
         if (lastSentence.length > 25) {
             return lastSentence;
         }
     }
 
-    // 3. Fallback: Return first sentence if no conclusions found
-    return sentences[0].trim();
+    // 3. Fallback: Return first sentence
+    return sentences[0];
 }
 
 // 1. Most Recent Feed via PubMed
@@ -728,7 +733,7 @@ async function fetchRecentPubMed(limit) {
             // Extract Abstract & Generate Smart Takeaway
             const abstractEls = art.querySelectorAll("AbstractText");
             let abstractText = Array.from(abstractEls).map(a => a.textContent).join(" ");
-            const summaryStr = extractGeminiTakeaway(abstractText);
+            const summaryStr = extractTakeaway(abstractText);
 
             const citations = citationMap[pmid] ?? 0;
 
@@ -755,7 +760,7 @@ async function fetchRecentPubMed(limit) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>✨ Gemini Summary:</strong> ${summaryStr}
+                    <strong>📝 Summary:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
@@ -848,7 +853,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
             const url = work.doi || work.ids?.doi || work.id || "#";
 
             const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
-            const summaryStr = extractGeminiTakeaway(abstractText);
+            const summaryStr = extractTakeaway(abstractText);
 
             let authorList = 'Unknown Authors';
             let firstInstitution = 'N/A';
@@ -888,7 +893,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>✨ Gemini Summary:</strong> ${summaryStr}
+                    <strong>📝 Summary:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
