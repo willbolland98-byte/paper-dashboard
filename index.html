@@ -209,7 +209,22 @@
             font-size: 13px;
             color: var(--text-dark);
             font-style: italic;
+            margin-bottom: 8px;
         }
+        .paper-summary {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #334155;
+            background-color: #f8fafc;
+            padding: 8px 12px;
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 0 4px 4px 0;
+            margin-top: 6px;
+        }
+        .paper-summary strong {
+            color: var(--primary-blue);
+        }
+
         .status-msg {
             font-weight: 500;
             margin-bottom: 12px;
@@ -401,7 +416,7 @@ async function fetchCitationCounts(pmids) {
     }
 }
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, resolve));
 
 async function fetchAllColumns() {
     const limit = parseInt(document.getElementById('limitInput').value.trim(), 10) || 10;
@@ -434,6 +449,19 @@ function getAbstractFromInvertedIndex(invertedIndex) {
     } catch (e) {
         return '';
     }
+}
+
+// Extract a clean 1-sentence summary from abstract text
+function extractOneSentenceSummary(abstractText) {
+    if (!abstractText || abstractText.trim().length === 0) {
+        return "Summary unavailable for this paper.";
+    }
+    const cleanText = abstractText.trim();
+    const match = cleanText.match(/^[^.!?]+[.!?]/);
+    if (match) {
+        return match[0];
+    }
+    return cleanText.slice(0, 150) + "...";
 }
 
 // 1. Most Recent Feed via PubMed
@@ -509,7 +537,7 @@ async function fetchRecentPubMed(limit) {
     }
 }
 
-// 2. Top Cited Feeds via OpenAlex API (With Enforced Exact Term Filtering)
+// 2. Top Cited Feeds via OpenAlex API (With Enforced Exact Term Filtering & 1-Sentence Summary)
 async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
@@ -529,7 +557,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
 
     let filters = [];
     
-    // Wrap topic in explicit quotes for exact OpenAlex search matching
     if (topic) {
         const queryTopic = topic.startsWith('"') ? topic : `"${topic}"`;
         filters.push(`title_and_abstract.search:${encodeURIComponent(queryTopic)}`);
@@ -553,7 +580,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
         filters.push(`type:article`);
     }
 
-    // Fetch extra items (up to 50) so we can strictly filter client-side without under-filling
     const fetchLimit = Math.max(limit * 3, 30);
     const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=cited_by_count:desc&per_page=${fetchLimit}`;
 
@@ -573,7 +599,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
             });
         }
 
-        // Limit results to user specified amount
         works = works.slice(0, limit);
 
         if (works.length === 0) {
@@ -590,6 +615,9 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
             const cleanDate = formatCleanDate(work);
             const journalName = work.primary_location?.source?.display_name || 'N/A';
             const url = work.doi || work.ids?.doi || work.id || "#";
+
+            const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
+            const summaryStr = extractOneSentenceSummary(abstractText);
 
             let authorList = 'Unknown Authors';
             if (work.authorships && work.authorships.length > 0) {
@@ -617,6 +645,9 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                 </div>
                 <div class="authors">
                     <strong>Authors:</strong> ${authorList}
+                </div>
+                <div class="paper-summary">
+                    <strong>Summary:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
