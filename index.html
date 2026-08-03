@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Respiratory Literature Dashboard</title>
 
-    <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/microscope.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -52,18 +51,18 @@
             align-items: center;
             background: var(--accent-light);
             color: var(--accent-blue);
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             padding: 4px 10px;
             border-radius: 20px;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
             margin-bottom: 8px;
         }
 
         h1 { color: var(--primary-slate); margin: 0 0 6px 0; font-size: 28px; font-weight: 700; }
         .subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
 
-        /* Unified Clean Search Box */
         .search-card {
             background: var(--bg-card);
             border-radius: var(--radius-xl);
@@ -109,7 +108,6 @@
 
         .btn-search:hover { background: var(--accent-blue); }
 
-        /* Chip Controls */
         .filter-chips {
             display: flex;
             flex-wrap: wrap;
@@ -134,10 +132,9 @@
         .chip:hover { color: var(--text-dark); background: #e2e8f0; }
         .chip.active { background: var(--accent-light); color: var(--accent-blue); border-color: var(--accent-blue); }
 
-        /* Secondary Filter Row */
         .filter-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
             margin-top: 14px;
             padding-top: 14px;
@@ -155,7 +152,6 @@
             cursor: pointer;
         }
 
-        /* Article Cards */
         .article-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -199,14 +195,14 @@
 
 <div class="container">
     <header>
-        <div class="header-badge">🫁 Respiratory Engine</div>
+        <div class="header-badge">Respiratory Engine</div>
         <h1>Respiratory Literature Intelligence</h1>
-        <p class="subtitle">Real-time search across leading respiratory and critical care journals.</p>
+        <p class="subtitle">Real-time search across scientific literature.</p>
     </header>
 
     <div class="search-card">
         <div class="search-input-wrapper">
-            <input type="text" id="searchInput" placeholder="Search topics, keywords, or title (e.g., COPD, IL-33, Asthma)..." value="COPD">
+            <input type="text" id="searchInput" placeholder="Search topics, keywords, or titles (e.g., COPD, IL-33, Asthma)..." value="COPD">
             <button class="btn-search" onclick="fetchArticles()">Search</button>
         </div>
 
@@ -219,24 +215,10 @@
 
         <div class="filter-row">
             <div>
-                <select id="journalSelect" onchange="fetchArticles()" style="width: 100%;">
-                    <option value="">All Leading Journals</option>
-                    <option value="The Lancet Respiratory Medicine">The Lancet Respiratory Medicine</option>
-                    <option value="American Journal of Respiratory and Critical Care Medicine">AJRCCM (Blue Journal)</option>
-                    <option value="European Respiratory Journal">European Respiratory Journal</option>
-                    <option value="Chest">Chest</option>
-                    <option value="Thorax">Thorax</option>
-                    <option value="Respirology">Respirology</option>
-                    <option value="Respiratory Research">Respiratory Research</option>
-                    <option value="Respiratory Medicine">Respiratory Medicine</option>
-                </select>
-            </div>
-
-            <div>
                 <select id="sortSelect" onchange="fetchArticles()" style="width: 100%;">
-                    <option value="recent" selected>⚡ Most Recent</option>
-                    <option value="cited2Y">🔥 Top Cited (2 Yrs)</option>
-                    <option value="citedAll">🏆 Top Cited (All Time)</option>
+                    <option value="recent" selected>Most Recent</option>
+                    <option value="cited2Y">Top Cited (2 Years)</option>
+                    <option value="citedAll">Top Cited (All Time)</option>
                 </select>
             </div>
 
@@ -265,7 +247,6 @@ function setPaperType(type) {
     fetchArticles();
 }
 
-// Get Today's Date in YYYY-MM-DD format to exclude future pre-prints/online-first entries
 function getTodayDateString() {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -317,7 +298,6 @@ async function fetchArticles() {
     const limit = parseInt(document.getElementById('limitSelect').value, 10);
     const sortVal = document.getElementById('sortSelect').value;
     const query = document.getElementById('searchInput').value.trim();
-    const journal = document.getElementById('journalSelect').value;
 
     const statusDiv = document.getElementById('statusMsg');
     const resultsDiv = document.getElementById('resultsContainer');
@@ -328,15 +308,11 @@ async function fetchArticles() {
     const todayStr = getTodayDateString();
     let filters = [];
 
-    // Filter out papers post-dated past today
+    // Floor the date to today to prevent pre-prints dated in the future
     filters.push(`publication_date:..${todayStr}`);
 
     if (query) {
         filters.push(`title_and_abstract.search:${encodeURIComponent(query)}`);
-    }
-
-    if (journal) {
-        filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
     }
 
     if (selectedPaperType === 'review') {
@@ -391,14 +367,14 @@ async function fetchArticles() {
             const card = document.createElement('div');
             card.className = 'article-card';
             card.innerHTML = `
-                <h3 class="article-title"><a href="${url}" target="_blank" rel="noopener">${titleStr} ↗</a></h3>
+                <h3 class="article-title"><a href="${url}" target="_blank" rel="noopener">${titleStr}</a></h3>
                 <div class="badge-row">
-                    <span class="badge citation">📌 ${citations.toLocaleString()} citations</span>
-                    <span class="badge journal">📖 ${journalName}</span>
-                    <span class="badge">📅 ${pubDate}</span>
+                    <span class="badge citation">${citations.toLocaleString()} citations</span>
+                    <span class="badge journal">${journalName}</span>
+                    <span class="badge">${pubDate}</span>
                 </div>
                 <div class="authors"><strong>Authors:</strong> ${authorList}</div>
-                <div class="paper-summary"><strong>📝 Takeaway:</strong> ${summaryStr}</div>
+                <div class="paper-summary"><strong>Takeaway:</strong> ${summaryStr}</div>
             `;
             resultsDiv.appendChild(card);
         });
@@ -409,7 +385,6 @@ async function fetchArticles() {
     }
 }
 
-// Trigger search on Enter key press
 document.getElementById('searchInput').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') fetchArticles();
 });
