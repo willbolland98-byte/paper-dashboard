@@ -536,7 +536,7 @@
         </div>
 
         <div class="button-container">
-            <button class="btn-submit" onclick="fetchArticles()">Fetch Articles</button>
+            <button class="btn-submit" id="btnSubmit" onclick="fetchArticles()">Fetch Articles</button>
         </div>
     </div>
 
@@ -698,19 +698,22 @@ async function fetchArticles() {
     }
 
     showSkeletons('articlesContainer');
-    statusDiv.innerText = `Fetching articles with Journal Impact Factor > ${currentIFThreshold}...`;
+    statusDiv.innerText = `Fetching articles...`;
 
     let filters = [];
-    if (topic) {
-        const queryTopic = topic.startsWith('"') ? topic : `"${topic}"`;
-        filters.push(`title_and_abstract.search:${encodeURIComponent(queryTopic)}`);
-    }
+    
+    // Core search query string
+    let searchQuery = topic || title || "";
+
     if (title) {
-        const queryTitle = title.startsWith('"') ? title : `"${title}"`;
-        filters.push(`title.search:${encodeURIComponent(queryTitle)}`);
+        filters.push(`title.search:${encodeURIComponent(title)}`);
     }
-    if (journal) filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
-    if (author) filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
+    if (journal) {
+        filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
+    }
+    if (author) {
+        filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
+    }
 
     if (selectedPaperType === 'review') {
         filters.push(`type:review`);
@@ -718,12 +721,17 @@ async function fetchArticles() {
         filters.push(`type:article`);
     }
 
-    if (currentIFThreshold > 0) {
-        filters.push(`primary_location.source.2yr_cited_by_count:>${currentIFThreshold}`);
-    }
-
     const fetchLimit = Math.max(limit * 3, 30);
-    const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=cited_by_count:desc&per_page=${fetchLimit}`;
+    
+    // Build API query using OpenAlex standard format with polite mailto
+    let apiUrl = `https://api.openalex.org/works?per_page=${fetchLimit}&mailto=dashboard@example.com`;
+    
+    if (searchQuery) {
+        apiUrl += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+    if (filters.length > 0) {
+        apiUrl += `&filter=${filters.join(',')}`;
+    }
 
     try {
         const res = await fetch(apiUrl);
@@ -731,6 +739,7 @@ async function fetchArticles() {
         const data = await res.json();
         let works = data.results || [];
 
+        // Client-side filtering for topic matching
         if (topic) {
             const cleanTopic = topic.replace(/"/g, '').toLowerCase();
             works = works.filter(work => {
@@ -740,6 +749,7 @@ async function fetchArticles() {
             });
         }
 
+        // Filter by 2-year citation count / Impact Factor threshold
         if (currentIFThreshold > 0) {
             works = works.filter(work => {
                 const estIF = work.primary_location?.source?.2yr_cited_by_count || 0;
@@ -750,7 +760,7 @@ async function fetchArticles() {
         works = works.slice(0, limit);
 
         if (works.length === 0) {
-            statusDiv.innerText = `No articles found matching Impact Factor > ${currentIFThreshold}.`;
+            statusDiv.innerText = `No articles found matching Impact Factor > ${currentIFThreshold}. Try lowering the IF threshold or broadening your keywords.`;
             resultsDiv.innerHTML = "";
             return;
         }
@@ -818,13 +828,21 @@ async function fetchArticles() {
         });
     } catch (e) {
         console.error("Fetch Error:", e);
-        statusDiv.innerText = "Unable to load papers.";
+        statusDiv.innerText = "Error requesting literature data. Please check your internet connection or lower search restriction settings.";
         resultsDiv.innerHTML = "";
     }
 }
 
-// Automatically fetch default results on load
+// Enable pressing 'Enter' key inside inputs to submit search
 document.addEventListener("DOMContentLoaded", () => {
+    const inputs = document.querySelectorAll('input[type="text"]');
+    inputs.forEach(input => {
+        input.addEventListener("keyup", (event) => {
+            if (event.key === "Enter") {
+                fetchArticles();
+            }
+        });
+    });
     fetchArticles();
 });
 </script>
