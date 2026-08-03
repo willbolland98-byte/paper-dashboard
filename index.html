@@ -256,28 +256,6 @@ function showSkeletons() {
     `).join('');
 }
 
-function getAbstractFromInvertedIndex(invertedIndex) {
-    if (!invertedIndex) return '';
-    try {
-        let maxPos = -1;
-        for (let word in invertedIndex) {
-            for (let pos of invertedIndex[word]) {
-                if (pos > maxPos) maxPos = pos;
-            }
-        }
-        if (maxPos === -1) return '';
-        let words = new Array(maxPos + 1);
-        for (let word in invertedIndex) {
-            for (let pos of invertedIndex[word]) {
-                words[pos] = word;
-            }
-        }
-        return words.join(' ');
-    } catch (e) {
-        return '';
-    }
-}
-
 function extractTakeaway(abstractText) {
     if (!abstractText || !abstractText.trim()) return "Summary unavailable for this paper.";
     const sentences = abstractText.trim().split(/(?<=[.!?])\s+(?=[A-Z])/);
@@ -295,28 +273,32 @@ async function fetchArticles() {
     showSkeletons();
     statusDiv.innerText = "Searching articles...";
 
-    // Build query using standard, reliable OpenAlex parameters
-    let apiUrl = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=${limit}`;
+    // Build Europe PMC query terms
+    let queryString = query;
 
-    // Add type filter if selected
     if (selectedPaperType === 'review') {
-        apiUrl += `&filter=type:review`;
+        queryString += ' AND (PUB_TYPE:"Review" OR PUB_TYPE:"Systematic Review")';
     } else if (selectedPaperType === 'research') {
-        apiUrl += `&filter=type:article`;
+        queryString += ' AND PUB_TYPE:"Journal Article"';
     }
 
-    // Add sorting
-    if (sortVal === 'recent') {
-        apiUrl += `&sort=publication_date:desc`;
-    } else if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
-        apiUrl += `&sort=cited_by_count:desc`;
+    if (sortVal === 'cited2Y') {
+        const currentYear = new Date().getFullYear();
+        queryString += ` AND (PUB_YEAR:${currentYear - 2} OR PUB_YEAR:${currentYear - 1} OR PUB_YEAR:${currentYear})`;
     }
+
+    let sortParam = "P_PD_DATE desc"; // Default: Most Recent
+    if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
+        sortParam = "CITED desc";
+    }
+
+    const apiUrl = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(queryString)}&sort=${encodeURIComponent(sortParam)}&pageSize=${limit}&format=json`;
 
     try {
         const res = await fetch(apiUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        const works = data.results || [];
+        const works = data.resultList?.result || [];
 
         if (works.length === 0) {
             statusDiv.innerText = "No articles found matching your query.";
@@ -328,20 +310,21 @@ async function fetchArticles() {
         resultsDiv.innerHTML = "";
 
         works.forEach(work => {
-            const titleStr = work.display_name || "Untitled Paper";
-            const citations = work.cited_by_count || 0;
-            const pubDate = work.publication_date || "N/A";
-            const journalName = work.primary_location?.source?.display_name || 'N/A';
-            const url = work.doi || work.ids?.doi || work.id || "#";
-
-            const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
-            const summaryStr = extractTakeaway(abstractText);
-
-            let authorList = 'Unknown Authors';
-            if (work.authorships?.length > 0) {
-                const names = work.authorships.map(a => a.author?.display_name).filter(Boolean);
-                authorList = names.slice(0, 4).join(', ') + (names.length > 4 ? ' et al.' : '');
+            const titleStr = work.title ? work.title.replace(/\.$/, '') : "Untitled Paper";
+            const citations = work.citedByCount || 0;
+            const pubDate = work.firstPublicationDate || work.pubYear || "N/A";
+            const journalName = work.journalTitle || 'Scientific Journal';
+            
+            let url = "#";
+            if (work.doi) {
+                url = `https://doi.org/${work.doi}`;
+            } else if (work.pmid) {
+                url = `https://pubmed.ncbi.nlm.nih.gov/${work.pmid}/`;
             }
+
+            const abstractText = work.abstractText || '';
+            const summaryStr = extractTakeaway(abstractText);
+            const authorList = work.authorString || 'Unknown Authors';
 
             const card = document.createElement('div');
             card.className = 'article-card';
