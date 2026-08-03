@@ -300,50 +300,46 @@ async function fetchArticles() {
     showSkeletons();
     statusDiv.innerText = "Searching articles...";
 
-    let filters = [];
+    // Build URL components
+    const params = new URLSearchParams();
+    
+    // OpenAlex polite pool prevents HTTP 403 / CORS rate blocks
+    params.append('mailto', 'dashboard@example.com');
+    
+    if (query) {
+        params.append('search', query);
+    }
 
+    let filterArray = [];
     if (selectedPaperType === 'review') {
-        filters.push('type:review');
+        filterArray.push('type:review');
     } else if (selectedPaperType === 'research') {
-        filters.push('type:article');
+        filterArray.push('type:article');
     }
 
     if (sortVal === 'cited2Y') {
         const currentYear = new Date().getFullYear();
-        filters.push(`publication_year:${currentYear - 2}-${currentYear}`);
+        filterArray.push(`publication_year:${currentYear - 2}-${currentYear}`);
     }
 
-    let queryParams = [];
-
-    if (filters.length > 0) {
-        queryParams.push(`filter=${filters.join(',')}`);
-    }
-
-    if (query) {
-        queryParams.push(`search=${encodeURIComponent(query)}`);
+    if (filterArray.length > 0) {
+        params.append('filter', filterArray.join(','));
     }
 
     let sortParam = "publication_date:desc";
     if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
         sortParam = "cited_by_count:desc";
     }
-    queryParams.push(`sort=${sortParam}`);
-    queryParams.push(`per_page=${limit * 2}`); // Over-fetch to filter future dates safely
+    params.append('sort', sortParam);
+    params.append('per_page', limit);
 
-    const apiUrl = `https://api.openalex.org/works?${queryParams.join('&')}`;
+    const apiUrl = `https://api.openalex.org/works?${params.toString()}`;
 
     try {
         const res = await fetch(apiUrl);
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
-        let works = data.results || [];
-
-        // Filter out future dates (Online First / pre-prints post-dated into the future)
-        const todayStr = new Date().toISOString().split('T')[0];
-        works = works.filter(work => {
-            if (!work.publication_date) return true;
-            return work.publication_date <= todayStr;
-        }).slice(0, limit);
+        const works = data.results || [];
 
         if (works.length === 0) {
             statusDiv.innerText = "No articles found matching your query.";
@@ -386,7 +382,7 @@ async function fetchArticles() {
         });
     } catch (e) {
         console.error("Fetch Error:", e);
-        statusDiv.innerText = "Failed to load articles. Please check your query.";
+        statusDiv.innerText = "Failed to load articles. Check developer console for details.";
         resultsDiv.innerHTML = "";
     }
 }
