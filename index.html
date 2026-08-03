@@ -29,7 +29,6 @@
             --radius-sm: 6px;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08);
         }
 
         * { box-sizing: border-box; }
@@ -286,13 +285,9 @@ function extractTakeaway(abstractText) {
 }
 
 async function fetchArticles() {
-    const limitSelect = document.getElementById('limitSelect');
-    const sortSelect = document.getElementById('sortSelect');
-    const searchInput = document.getElementById('searchInput');
-
-    const limit = limitSelect ? parseInt(limitSelect.value, 10) : 10;
-    const sortVal = sortSelect ? sortSelect.value : 'recent';
-    const query = searchInput ? searchInput.value.trim() : 'COPD';
+    const limit = parseInt(document.getElementById('limitSelect').value, 10) || 10;
+    const sortVal = document.getElementById('sortSelect').value;
+    const query = document.getElementById('searchInput').value.trim() || 'COPD';
 
     const statusDiv = document.getElementById('statusMsg');
     const resultsDiv = document.getElementById('resultsContainer');
@@ -300,44 +295,26 @@ async function fetchArticles() {
     showSkeletons();
     statusDiv.innerText = "Searching articles...";
 
-    // Build URL components
-    const params = new URLSearchParams();
-    
-    // OpenAlex polite pool prevents HTTP 403 / CORS rate blocks
-    params.append('mailto', 'dashboard@example.com');
-    
-    if (query) {
-        params.append('search', query);
-    }
+    // Build query using standard, reliable OpenAlex parameters
+    let apiUrl = `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=${limit}`;
 
-    let filterArray = [];
+    // Add type filter if selected
     if (selectedPaperType === 'review') {
-        filterArray.push('type:review');
+        apiUrl += `&filter=type:review`;
     } else if (selectedPaperType === 'research') {
-        filterArray.push('type:article');
+        apiUrl += `&filter=type:article`;
     }
 
-    if (sortVal === 'cited2Y') {
-        const currentYear = new Date().getFullYear();
-        filterArray.push(`publication_year:${currentYear - 2}-${currentYear}`);
+    // Add sorting
+    if (sortVal === 'recent') {
+        apiUrl += `&sort=publication_date:desc`;
+    } else if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
+        apiUrl += `&sort=cited_by_count:desc`;
     }
-
-    if (filterArray.length > 0) {
-        params.append('filter', filterArray.join(','));
-    }
-
-    let sortParam = "publication_date:desc";
-    if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
-        sortParam = "cited_by_count:desc";
-    }
-    params.append('sort', sortParam);
-    params.append('per_page', limit);
-
-    const apiUrl = `https://api.openalex.org/works?${params.toString()}`;
 
     try {
         const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const works = data.results || [];
 
@@ -382,7 +359,7 @@ async function fetchArticles() {
         });
     } catch (e) {
         console.error("Fetch Error:", e);
-        statusDiv.innerText = "Failed to load articles. Check developer console for details.";
+        statusDiv.innerText = "Failed to load articles.";
         resultsDiv.innerHTML = "";
     }
 }
