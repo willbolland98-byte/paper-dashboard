@@ -430,6 +430,16 @@
             font-size: 13px;
         }
 
+        .error-card {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
         /* Skeleton Animated Loading State */
         .skeleton-card {
             background: var(--bg-card);
@@ -681,10 +691,33 @@ function extractTakeaway(abstractText) {
     return sentences[0];
 }
 
+// Resilient API Request logic with CORS bypass fallback
+async function fetchWithProxyFallback(url) {
+    try {
+        // First try direct API request
+        const directResponse = await fetch(url);
+        if (directResponse.ok) {
+            return await directResponse.json();
+        }
+    } catch (directErr) {
+        console.warn("Direct fetch blocked or failed, attempting CORS Proxy fallback...", directErr);
+    }
+
+    // Fallback: Use CORS proxy
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const proxyResponse = await fetch(proxyUrl);
+    if (!proxyResponse.ok) {
+        throw new Error(`Proxy Request Failed with Status ${proxyResponse.status}`);
+    }
+    const proxyData = await proxyResponse.json();
+    return JSON.parse(proxyData.contents);
+}
+
 async function fetchArticles() {
     const statusDiv = document.getElementById('statusMessage');
     const resultsDiv = document.getElementById('articlesContainer');
-    const limit = parseInt(document.getElementById('limitInput').value.trim(), 10) || 10;
+    const limitInput = document.getElementById('limitInput').value.trim();
+    const limit = parseInt(limitInput, 10) || 10;
 
     const topic   = document.getElementById('topicInput').value.trim();
     const title   = document.getElementById('titleInput').value.trim();
@@ -698,12 +731,10 @@ async function fetchArticles() {
     }
 
     showSkeletons('articlesContainer');
-    statusDiv.innerText = `Fetching articles...`;
+    statusDiv.innerText = `Fetching research articles...`;
 
-    let filters = [];
-    
-    // Core search query string
     let searchQuery = topic || title || "";
+    let filters = [];
 
     if (title) {
         filters.push(`title.search:${encodeURIComponent(title)}`);
@@ -723,7 +754,6 @@ async function fetchArticles() {
 
     const fetchLimit = Math.max(limit * 3, 30);
     
-    // Build API query using OpenAlex standard format with polite mailto
     let apiUrl = `https://api.openalex.org/works?per_page=${fetchLimit}&mailto=dashboard@example.com`;
     
     if (searchQuery) {
@@ -734,9 +764,7 @@ async function fetchArticles() {
     }
 
     try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-        const data = await res.json();
+        const data = await fetchWithProxyFallback(apiUrl);
         let works = data.results || [];
 
         // Client-side filtering for topic matching
@@ -760,12 +788,12 @@ async function fetchArticles() {
         works = works.slice(0, limit);
 
         if (works.length === 0) {
-            statusDiv.innerText = `No articles found matching Impact Factor > ${currentIFThreshold}. Try lowering the IF threshold or broadening your keywords.`;
+            statusDiv.innerText = `No articles found matching Impact Factor threshold (> ${currentIFThreshold}). Try lowering the threshold or broadening search terms.`;
             resultsDiv.innerHTML = "";
             return;
         }
 
-        statusDiv.innerText = `Displaying ${works.length} articles matching Impact Factor > ${currentIFThreshold}:`;
+        statusDiv.innerText = `Displaying ${works.length} articles (Filtered by Impact Factor > ${currentIFThreshold}):`;
         resultsDiv.innerHTML = "";
         const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
 
@@ -828,12 +856,17 @@ async function fetchArticles() {
         });
     } catch (e) {
         console.error("Fetch Error:", e);
-        statusDiv.innerText = "Error requesting literature data. Please check your internet connection or lower search restriction settings.";
-        resultsDiv.innerHTML = "";
+        statusDiv.innerText = "";
+        resultsDiv.innerHTML = `
+            <div class="error-card">
+                <strong>Unable to connect to OpenAlex API.</strong><br>
+                If you are viewing this file directly from local storage, ensure you have an active internet connection or try hosting it using a simple local web server (e.g., Live Server or VS Code extension).
+            </div>
+        `;
     }
 }
 
-// Enable pressing 'Enter' key inside inputs to submit search
+// Attach Enter Key Handler to text inputs
 document.addEventListener("DOMContentLoaded", () => {
     const inputs = document.querySelectorAll('input[type="text"]');
     inputs.forEach(input => {
