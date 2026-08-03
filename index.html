@@ -6,22 +6,34 @@
     <title>Research Article Dashboard</title>
 
     <link rel="apple-touch-icon" href="https://img.icons8.com/color/180/microscope.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
             --bg-main: #f8fafc;
             --bg-card: #ffffff;
-            --primary-blue: #0f172a;
+            --primary-slate: #0f172a;
             --accent-blue: #2563eb;
+            --accent-blue-hover: #1d4ed8;
             --accent-light: #eff6ff;
-            --summary-purple: #6366f1;
-            --summary-bg: #f5f3ff;
+            --indigo-accent: #6366f1;
+            --indigo-light: #eef2ff;
+            --emerald-accent: #059669;
+            --emerald-light: #ecfdf5;
+            --summary-bg: #faf5ff;
+            --summary-border: #8b5cf6;
             --border-color: #e2e8f0;
             --text-dark: #0f172a;
             --text-muted: #64748b;
+            --radius-xl: 16px;
             --radius-lg: 12px;
             --radius-md: 8px;
             --radius-sm: 6px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
         }
 
         * {
@@ -29,55 +41,78 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
             background-color: var(--bg-main);
             color: var(--text-dark);
             margin: 0;
-            padding: 24px 16px;
+            padding: 32px 16px;
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 860px;
+            max-width: 920px;
             margin: 0 auto;
         }
 
         header {
-            margin-bottom: 20px;
+            margin-bottom: 28px;
+            text-align: left;
+        }
+
+        header .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent-light);
+            color: var(--accent-blue);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
         }
 
         h1 {
-            color: var(--primary-blue);
+            color: var(--primary-slate);
             margin: 0 0 6px 0;
-            font-size: 26px;
-            letter-spacing: -0.5px;
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -0.8px;
         }
 
         .subtitle {
             color: var(--text-muted);
             margin: 0;
-            font-size: 14px;
+            font-size: 15px;
         }
 
-        /* Search Panel Container */
+        /* Sleek Search Panel Container */
         .search-container {
             background: var(--bg-card);
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-xl);
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-            padding: 20px;
-            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+            padding: 24px;
+            margin-bottom: 28px;
+            transition: box-shadow 0.2s ease;
+        }
+
+        .search-container:focus-within {
+            box-shadow: var(--shadow-lg);
         }
 
         .search-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            gap: 16px;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
         }
 
         .input-group.full-width {
@@ -85,58 +120,63 @@
         }
 
         label {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             color: var(--text-muted);
         }
 
         input[type="text"] {
-            padding: 10px 12px;
+            padding: 12px 14px;
             font-size: 14px;
+            font-family: inherit;
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-md);
             background-color: #f8fafc;
             color: var(--text-dark);
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
         }
 
         input[type="text"]:focus {
             outline: none;
             border-color: var(--accent-blue);
             background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
         }
 
         /* Toggle Button Groups */
         .toggle-group {
             display: flex;
-            gap: 6px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: var(--radius-md);
+            gap: 4px;
         }
 
         .toggle-btn {
             flex: 1;
             padding: 8px 12px;
             font-size: 13px;
-            font-weight: 500;
-            background-color: #f1f5f9;
+            font-weight: 600;
+            font-family: inherit;
+            background-color: transparent;
             color: var(--text-muted);
-            border: 1px solid transparent;
+            border: none;
             border-radius: var(--radius-sm);
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .toggle-btn:hover {
-            color: var(--accent-blue);
-            background-color: #e2e8f0;
+            color: var(--text-dark);
         }
 
         .toggle-btn.active {
-            background-color: var(--accent-blue);
-            color: white;
-            font-weight: 600;
+            background-color: #ffffff;
+            color: var(--accent-blue);
+            box-shadow: var(--shadow-sm);
+            font-weight: 700;
         }
 
         /* Advanced Options Collapsible */
@@ -148,18 +188,23 @@
             font-weight: 600;
             cursor: pointer;
             padding: 0;
-            margin-top: 10px;
+            margin-top: 14px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
+            transition: color 0.15s;
+        }
+
+        .advanced-toggle:hover {
+            color: var(--accent-blue-hover);
         }
 
         .advanced-options {
             display: none;
             grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
-            margin-top: 14px;
-            padding-top: 14px;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
             border-top: 1px dashed var(--border-color);
         }
 
@@ -171,41 +216,54 @@
             grid-column: span 2;
             display: flex;
             justify-content: flex-end;
-            margin-top: 12px;
+            margin-top: 16px;
         }
 
         .btn-submit {
-            padding: 10px 24px;
+            padding: 12px 28px;
             font-size: 14px;
-            background-color: var(--primary-blue);
+            font-family: inherit;
+            background-color: var(--primary-slate);
             color: white;
             border: none;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-md);
             cursor: pointer;
             font-weight: 600;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.15);
         }
 
         .btn-submit:hover {
             background-color: var(--accent-blue);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
         .btn-submit:active {
-            transform: scale(0.98);
+            transform: translateY(1px);
         }
 
         /* Sticky Tab Bar */
         .sticky-tab-bar {
             position: sticky;
-            top: 12px;
+            top: 16px;
             z-index: 100;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             padding: 6px;
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border-color);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+        }
+
+        .sticky-tab-bar .toggle-group {
+            background: transparent;
+            padding: 0;
+        }
+
+        .sticky-tab-bar .toggle-btn {
+            padding: 10px 14px;
         }
 
         /* Column Visibility Switch */
@@ -221,16 +279,16 @@
         .article-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s ease-in-out;
+            border-radius: var(--radius-xl);
+            padding: 22px;
+            margin-bottom: 18px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .article-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+            box-shadow: var(--shadow-lg);
             border-color: #cbd5e1;
         }
 
@@ -243,17 +301,18 @@
         }
 
         .article-title {
-            font-size: 17px;
+            font-size: 18px;
             margin: 0;
             line-height: 1.4;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: -0.3px;
         }
 
         .article-title a {
             color: var(--text-dark);
             text-decoration: none;
             display: inline-flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 6px;
             transition: color 0.15s;
         }
@@ -262,21 +321,21 @@
             color: var(--accent-blue);
         }
 
-        /* Pill Badges */
+        /* Visual Pill Badges */
         .badge-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 14px;
         }
 
         .badge {
             display: inline-flex;
             align-items: center;
-            padding: 3px 10px;
+            padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
             background-color: #f1f5f9;
             color: var(--text-muted);
         }
@@ -285,64 +344,75 @@
             background-color: var(--accent-light);
             color: var(--accent-blue);
             font-weight: 700;
-            white-space: nowrap;
+        }
+
+        .badge.impact-factor {
+            background-color: var(--emerald-light);
+            color: var(--emerald-accent);
+            font-weight: 700;
+        }
+
+        .badge.journal {
+            background-color: var(--indigo-light);
+            color: var(--indigo-accent);
         }
 
         .external-icon {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
             stroke: currentColor;
-            stroke-width: 2;
+            stroke-width: 2.2;
             stroke-linecap: round;
             stroke-linejoin: round;
             fill: none;
             flex-shrink: 0;
+            margin-top: 3px;
         }
 
         .authors {
             font-size: 13px;
             color: var(--text-dark);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .institution {
             font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
 
-        /* Summary Callout Box */
+        /* AI Summary Callout Box */
         .paper-summary {
             font-size: 13px;
-            line-height: 1.5;
+            line-height: 1.6;
             color: #334155;
             background-color: var(--summary-bg);
-            padding: 10px 14px;
-            border-left: 3px solid var(--summary-purple);
-            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-            margin-top: 10px;
+            padding: 12px 16px;
+            border-left: 3px solid var(--summary-border);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            margin-top: 12px;
         }
 
         .paper-summary strong {
-            color: #4338ca;
+            color: #6d28d9;
             display: inline-block;
             margin-bottom: 2px;
         }
 
         .status-msg {
-            font-weight: 500;
-            margin-bottom: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
             color: var(--text-muted);
             font-size: 14px;
         }
 
-        /* Skeleton Animated Loading State */
+        /* Animated Skeleton Loader */
         .skeleton-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 16px;
+            border-radius: var(--radius-xl);
+            padding: 22px;
+            margin-bottom: 18px;
         }
 
         .skeleton-line {
@@ -351,7 +421,7 @@
             background-size: 200% 100%;
             animation: skeleton-loading 1.5s infinite;
             border-radius: 4px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
         @keyframes skeleton-loading {
@@ -359,19 +429,12 @@
             100% { background-position: -200% 0; }
         }
 
-        @media (max-width: 600px) {
-            .search-grid, .advanced-options {
-                grid-template-columns: 1fr;
-            }
-            .input-group.full-width, .button-container {
-                grid-column: span 1;
-            }
-            .toggle-group {
-                flex-direction: column;
-            }
-            .article-title-row {
-                flex-direction: column;
-            }
+        @media (max-width: 640px) {
+            body { padding: 16px 12px; }
+            .search-grid, .advanced-options { grid-template-columns: 1fr; }
+            .input-group.full-width, .button-container { grid-column: span 1; }
+            .toggle-group { flex-direction: column; }
+            .article-title-row { flex-direction: column; }
         }
     </style>
 </head>
@@ -379,8 +442,9 @@
 
 <div class="container">
     <header>
-        <h1>Research Article Dashboard</h1>
-        <p class="subtitle">Real-time paper feed organized by recency and citation impact.</p>
+        <div class="header-badge">🔬 Live Feed Dashboard</div>
+        <h1>Research Article Intelligence</h1>
+        <p class="subtitle">Filter and analyze literature by recency, citation impact, and journal rank.</p>
     </header>
 
     <!-- Search Controls -->
@@ -433,12 +497,13 @@
         </div>
     </div>
 
-    <!-- Sticky Tab Navigation Bar -->
+    <!-- Sticky Navigation Tab Bar -->
     <div class="sticky-tab-bar">
         <div class="toggle-group">
             <button type="button" id="feedRecent" class="toggle-btn active" onclick="showColumn('recent')">⚡ Most Recent</button>
-            <button type="button" id="feedCited1Y" class="toggle-btn" onclick="showColumn('cited1Y')">🔥 Top Cited (Last 1 Year)</button>
+            <button type="button" id="feedCited1Y" class="toggle-btn" onclick="showColumn('cited1Y')">🔥 Top Cited (1 Yr)</button>
             <button type="button" id="feedCitedAll" class="toggle-btn" onclick="showColumn('citedAll')">🏆 Top Cited (All Time)</button>
+            <button type="button" id="feedImpactFactor" class="toggle-btn" onclick="showColumn('impactFactor')">📊 Journal Impact Factor</button>
         </div>
     </div>
 
@@ -456,6 +521,11 @@
     <div id="col-citedAll" class="column-content">
         <div id="citedAllStatus" class="status-msg"></div>
         <div id="citedAllResults"></div>
+    </div>
+
+    <div id="col-impactFactor" class="column-content">
+        <div id="impactFactorStatus" class="status-msg"></div>
+        <div id="impactFactorResults"></div>
     </div>
 </div>
 
@@ -483,13 +553,14 @@ function setPaperType(type) {
 }
 
 function showColumn(colKey) {
-    ['recent', 'cited1Y', 'citedAll'].forEach(key => {
+    ['recent', 'cited1Y', 'citedAll', 'impactFactor'].forEach(key => {
         document.getElementById(`col-${key}`).classList.remove('active');
     });
 
     document.getElementById('feedRecent').classList.toggle('active', colKey === 'recent');
     document.getElementById('feedCited1Y').classList.toggle('active', colKey === 'cited1Y');
     document.getElementById('feedCitedAll').classList.toggle('active', colKey === 'citedAll');
+    document.getElementById('feedImpactFactor').classList.toggle('active', colKey === 'impactFactor');
 
     document.getElementById(`col-${colKey}`).classList.add('active');
 }
@@ -498,9 +569,9 @@ function showSkeletons(containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = Array(3).fill(0).map(() => `
         <div class="skeleton-card">
-            <div class="skeleton-line" style="width: 80%;"></div>
-            <div class="skeleton-line" style="width: 40%;"></div>
-            <div class="skeleton-line" style="width: 60%;"></div>
+            <div class="skeleton-line" style="width: 75%;"></div>
+            <div class="skeleton-line" style="width: 35%;"></div>
+            <div class="skeleton-line" style="width: 50%;"></div>
             <div class="skeleton-line" style="width: 100%;"></div>
         </div>
     `).join('');
@@ -584,12 +655,15 @@ async function fetchAllColumns() {
     showSkeletons('recentResults');
     showSkeletons('cited1YResults');
     showSkeletons('citedAllResults');
+    showSkeletons('impactFactorResults');
 
     await fetchRecentPubMed(limit);
     await sleep(250); 
     await fetchOpenAlexTopCited(limit, 1, 'cited1YStatus', 'cited1YResults');
     await sleep(250);
     await fetchOpenAlexTopCited(limit, null, 'citedAllStatus', 'citedAllResults');
+    await sleep(250);
+    await fetchOpenAlexImpactFactor(limit);
 }
 
 // Helper to reconstruct abstract from OpenAlex inverted index
@@ -615,15 +689,13 @@ function getAbstractFromInvertedIndex(invertedIndex) {
     }
 }
 
-// Upgraded Heuristic Takeaway Engine (Handles species names & abbreviations gracefully)
+// Heuristic Takeaway Engine
 function extractTakeaway(abstractText) {
     if (!abstractText || abstractText.trim().length === 0) {
         return "Summary unavailable for this paper.";
     }
 
     const cleanText = abstractText.trim();
-
-    // Split sentences without getting tricked by species names/abbreviations like "G. dahurica" or "et al."
     const sentences = cleanText
         .split(/(?<=[.!?])\s+(?=[A-Z])/)
         .map(s => s.trim())
@@ -631,7 +703,6 @@ function extractTakeaway(abstractText) {
 
     if (sentences.length === 0) return cleanText;
 
-    // Priority conclusion triggers in scientific abstracts
     const conclusionTriggers = [
         "conclude that", "demonstrate that", "demonstrated that", "show that", 
         "showed that", "suggest that", "suggests that", "found that", 
@@ -639,7 +710,6 @@ function extractTakeaway(abstractText) {
         "overall,", "taken together", "we identified", "our data suggest"
     ];
 
-    // 1. First Pass: Search for high-value conclusion sentences
     for (let sentence of sentences) {
         const lower = sentence.toLowerCase();
         if (conclusionTriggers.some(trigger => lower.includes(trigger))) {
@@ -647,7 +717,6 @@ function extractTakeaway(abstractText) {
         }
     }
 
-    // 2. Second Pass: Scientific conclusions almost always sit at the end of the abstract
     if (sentences.length > 1) {
         const lastSentence = sentences[sentences.length - 1];
         if (lastSentence.length > 25) {
@@ -655,7 +724,6 @@ function extractTakeaway(abstractText) {
         }
     }
 
-    // 3. Fallback: Return first sentence
     return sentences[0];
 }
 
@@ -704,13 +772,11 @@ async function fetchRecentPubMed(limit) {
             const title = art.querySelector("ArticleTitle")?.textContent || "Untitled Paper";
             const journal = art.querySelector("Title")?.textContent || art.querySelector("ISOAbbreviation")?.textContent || "N/A";
 
-            // Extract Date
             const pubDate = art.querySelector("JournalIssue PubDate");
             const year = pubDate?.querySelector("Year")?.textContent || "";
             const month = pubDate?.querySelector("Month")?.textContent || "";
             const cleanDate = month ? `${month} ${year}` : year || "N/A";
 
-            // Extract Authors & First Author Institution
             const authorEls = art.querySelectorAll("AuthorList Author");
             let authorNames = "Unknown Authors";
             let firstInstitution = "N/A";
@@ -729,7 +795,6 @@ async function fetchRecentPubMed(limit) {
                 }
             }
 
-            // Extract Abstract & Generate Smart Takeaway
             const abstractEls = art.querySelectorAll("AbstractText");
             let abstractText = Array.from(abstractEls).map(a => a.textContent).join(" ");
             const summaryStr = extractTakeaway(abstractText);
@@ -749,7 +814,7 @@ async function fetchRecentPubMed(limit) {
                 </div>
                 <div class="badge-row">
                     <span class="badge citation">📌 ${citations.toLocaleString()} ${citations === 1 ? 'citation' : 'citations'}</span>
-                    <span class="badge">📖 ${journal}</span>
+                    <span class="badge journal">📖 ${journal}</span>
                     <span class="badge">📅 ${cleanDate}</span>
                 </div>
                 <div class="authors">
@@ -759,7 +824,7 @@ async function fetchRecentPubMed(limit) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>📝 Summary:</strong> ${summaryStr}
+                    <strong>📝 Takeaway:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
@@ -882,7 +947,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                 </div>
                 <div class="badge-row">
                     <span class="badge citation">📌 ${citations.toLocaleString()} ${citations === 1 ? 'citation' : 'citations'}</span>
-                    <span class="badge">📖 ${journalName}</span>
+                    <span class="badge journal">📖 ${journalName}</span>
                     <span class="badge">📅 ${cleanDate}</span>
                 </div>
                 <div class="authors">
@@ -892,7 +957,7 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
                     <strong>Institution (1st Author):</strong> ${firstInstitution}
                 </div>
                 <div class="paper-summary">
-                    <strong>📝 Summary:</strong> ${summaryStr}
+                    <strong>📝 Takeaway:</strong> ${summaryStr}
                 </div>
             `;
             resultsDiv.appendChild(card);
@@ -900,6 +965,138 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     } catch (e) {
         console.error("OpenAlex Fetch Error:", e);
         statusDiv.innerText = "Unable to load top cited papers.";
+        resultsDiv.innerHTML = "";
+    }
+}
+
+// 3. Top Journal Impact Factor Feed via OpenAlex API
+async function fetchOpenAlexImpactFactor(limit) {
+    const statusDiv = document.getElementById('impactFactorStatus');
+    const resultsDiv = document.getElementById('impactFactorResults');
+    statusDiv.innerText = "Loading papers ranked by Journal Impact Factor...";
+
+    const topic   = document.getElementById('topicInput').value.trim();
+    const title   = document.getElementById('titleInput').value.trim();
+    const journal = document.getElementById('journalInput').value.trim();
+    const author  = document.getElementById('authorInput').value.trim();
+
+    if (!topic && !title && !journal && !author) {
+        statusDiv.innerText = "Please fill in at least one search field.";
+        resultsDiv.innerHTML = "";
+        return;
+    }
+
+    let filters = [];
+
+    if (topic) {
+        const queryTopic = topic.startsWith('"') ? topic : `"${topic}"`;
+        filters.push(`title_and_abstract.search:${encodeURIComponent(queryTopic)}`);
+    }
+    if (title) {
+        const queryTitle = title.startsWith('"') ? title : `"${title}"`;
+        filters.push(`title.search:${encodeURIComponent(queryTitle)}`);
+    }
+    if (journal) filters.push(`primary_location.source.display_name.search:${encodeURIComponent(journal)}`);
+    if (author) filters.push(`author.displayName.search:${encodeURIComponent(author)}`);
+
+    if (selectedPaperType === 'review') {
+        filters.push(`type:review`);
+    } else if (selectedPaperType === 'research') {
+        filters.push(`type:article`);
+    }
+
+    // Sort works by the journal's 2-year Impact Factor via OpenAlex primary_location.source.2yr_mean_citedness
+    const fetchLimit = Math.max(limit * 3, 30);
+    const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=primary_location.source.2yr_mean_citedness:desc&per_page=${fetchLimit}`;
+
+    try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        let works = data.results || [];
+
+        if (topic) {
+            const cleanTopic = topic.replace(/"/g, '').toLowerCase();
+            works = works.filter(work => {
+                const titleText = (work.display_name || "").toLowerCase();
+                const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index).toLowerCase();
+                return titleText.includes(cleanTopic) || abstractText.includes(cleanTopic);
+            });
+        }
+
+        works = works.slice(0, limit);
+
+        if (works.length === 0) {
+            statusDiv.innerText = "No articles found matching criteria for Impact Factor ranking.";
+            resultsDiv.innerHTML = "";
+            return;
+        }
+
+        statusDiv.innerText = `Displaying top ${works.length} articles (ranked by Journal Impact Factor):`;
+        resultsDiv.innerHTML = "";
+        const externalIconSvg = `<svg class="external-icon" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+
+        works.forEach(work => {
+            const titleStr = work.display_name || "Untitled Paper";
+            const citations = work.cited_by_count || 0;
+            const cleanDate = formatCleanDate(work);
+            const journalName = work.primary_location?.source?.display_name || 'N/A';
+            const url = work.doi || work.ids?.doi || work.id || "#";
+
+            // Extract 2-Year Journal Mean Citedness (OpenAlex equivalent to Journal Impact Factor)
+            const rawIF = work.primary_location?.source?.summary_stats?.2yr_mean_citedness;
+            const impactFactorStr = (rawIF !== undefined && rawIF !== null) ? rawIF.toFixed(2) : "N/A";
+
+            const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
+            const summaryStr = extractTakeaway(abstractText);
+
+            let authorList = 'Unknown Authors';
+            let firstInstitution = 'N/A';
+
+            if (work.authorships && work.authorships.length > 0) {
+                const names = work.authorships.map(a => a.author?.display_name).filter(Boolean);
+                authorList = names.slice(0, 5).join(', ') + (names.length > 5 ? ' et al.' : '');
+
+                const firstAuthorship = work.authorships[0];
+                if (firstAuthorship?.institutions && firstAuthorship.institutions.length > 0) {
+                    firstInstitution = firstAuthorship.institutions.map(inst => inst.display_name).join(', ');
+                } else if (firstAuthorship?.raw_affiliation_strings && firstAuthorship.raw_affiliation_strings.length > 0) {
+                    firstInstitution = firstAuthorship.raw_affiliation_strings[0];
+                }
+            }
+
+            const card = document.createElement('div');
+            card.className = 'article-card';
+            card.innerHTML = `
+                <div class="article-title-row">
+                    <h3 class="article-title">
+                        <a href="${url}" target="_blank" rel="noopener">
+                            <span>${titleStr}</span>
+                            ${externalIconSvg}
+                        </a>
+                    </h3>
+                </div>
+                <div class="badge-row">
+                    <span class="badge impact-factor">📊 JIF: ${impactFactorStr}</span>
+                    <span class="badge citation">📌 ${citations.toLocaleString()} ${citations === 1 ? 'citation' : 'citations'}</span>
+                    <span class="badge journal">📖 ${journalName}</span>
+                    <span class="badge">📅 ${cleanDate}</span>
+                </div>
+                <div class="authors">
+                    <strong>Authors:</strong> ${authorList}
+                </div>
+                <div class="institution">
+                    <strong>Institution (1st Author):</strong> ${firstInstitution}
+                </div>
+                <div class="paper-summary">
+                    <strong>📝 Takeaway:</strong> ${summaryStr}
+                </div>
+            `;
+            resultsDiv.appendChild(card);
+        });
+    } catch (e) {
+        console.error("OpenAlex Impact Factor Error:", e);
+        statusDiv.innerText = "Unable to load papers ranked by Impact Factor.";
         resultsDiv.innerHTML = "";
     }
 }
