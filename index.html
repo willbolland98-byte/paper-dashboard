@@ -88,7 +88,6 @@
             font-size: 15px;
         }
 
-        /* Sleek Search Panel Container */
         .search-container {
             background: var(--bg-card);
             border-radius: var(--radius-xl);
@@ -145,7 +144,6 @@
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
         }
 
-        /* Toggle Button Groups */
         .toggle-group {
             display: flex;
             background: #f1f5f9;
@@ -179,7 +177,6 @@
             font-weight: 700;
         }
 
-        /* Advanced Options Collapsible */
         .advanced-toggle {
             background: none;
             border: none;
@@ -242,7 +239,6 @@
             transform: translateY(1px);
         }
 
-        /* Sticky Tab Bar */
         .sticky-tab-bar {
             position: sticky;
             top: 16px;
@@ -266,7 +262,6 @@
             padding: 10px 14px;
         }
 
-        /* Column Visibility Switch */
         .column-content {
             display: none;
         }
@@ -275,7 +270,6 @@
             display: block;
         }
 
-        /* Article Cards */
         .article-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -321,7 +315,6 @@
             color: var(--accent-blue);
         }
 
-        /* Visual Pill Badges */
         .badge-row {
             display: flex;
             flex-wrap: wrap;
@@ -381,7 +374,6 @@
             margin-bottom: 14px;
         }
 
-        /* AI Summary Callout Box */
         .paper-summary {
             font-size: 13px;
             line-height: 1.6;
@@ -406,7 +398,6 @@
             font-size: 14px;
         }
 
-        /* Animated Skeleton Loader */
         .skeleton-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -447,7 +438,6 @@
         <p class="subtitle">Filter and analyze literature by recency, citation impact, and journal rank.</p>
     </header>
 
-    <!-- Search Controls -->
     <div class="search-container">
         <div class="search-grid">
             <div class="input-group full-width">
@@ -465,7 +455,6 @@
             </div>
         </div>
 
-        <!-- Advanced Filters Toggle -->
         <button type="button" class="advanced-toggle" onclick="toggleAdvancedOptions()">
             <span id="advancedToggleText">⚙️ Show Advanced Filters</span>
         </button>
@@ -497,7 +486,6 @@
         </div>
     </div>
 
-    <!-- Sticky Navigation Tab Bar -->
     <div class="sticky-tab-bar">
         <div class="toggle-group">
             <button type="button" id="feedRecent" class="toggle-btn active" onclick="showColumn('recent')">⚡ Most Recent</button>
@@ -507,7 +495,6 @@
         </div>
     </div>
 
-    <!-- Feed Columns -->
     <div id="col-recent" class="column-content active">
         <div id="recentStatus" class="status-msg"></div>
         <div id="recentResults"></div>
@@ -626,7 +613,6 @@ function buildPubMedQuery() {
     return queryParts.join(' AND ');
 }
 
-// Fetch Citation Counts via NIH iCite for PubMed
 async function fetchCitationCounts(pmids) {
     if (!pmids || pmids.length === 0) return {};
     try {
@@ -666,7 +652,6 @@ async function fetchAllColumns() {
     await fetchOpenAlexImpactFactor(limit);
 }
 
-// Helper to reconstruct abstract from OpenAlex inverted index
 function getAbstractFromInvertedIndex(invertedIndex) {
     if (!invertedIndex) return '';
     try {
@@ -689,7 +674,6 @@ function getAbstractFromInvertedIndex(invertedIndex) {
     }
 }
 
-// Heuristic Takeaway Engine
 function extractTakeaway(abstractText) {
     if (!abstractText || abstractText.trim().length === 0) {
         return "Summary unavailable for this paper.";
@@ -727,7 +711,6 @@ function extractTakeaway(abstractText) {
     return sentences[0];
 }
 
-// 1. Most Recent Feed via PubMed
 async function fetchRecentPubMed(limit) {
     const baseQuery = buildPubMedQuery();
     const statusDiv = document.getElementById('recentStatus');
@@ -836,7 +819,6 @@ async function fetchRecentPubMed(limit) {
     }
 }
 
-// 2. Top Cited Feeds via OpenAlex API
 async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     const statusDiv = document.getElementById(statusId);
     const resultsDiv = document.getElementById(resultsId);
@@ -969,7 +951,6 @@ async function fetchOpenAlexTopCited(limit, yearsBack, statusId, resultsId) {
     }
 }
 
-// 3. Top Journal Impact Factor Feed via OpenAlex API
 async function fetchOpenAlexImpactFactor(limit) {
     const statusDiv = document.getElementById('impactFactorStatus');
     const resultsDiv = document.getElementById('impactFactorResults');
@@ -1005,7 +986,6 @@ async function fetchOpenAlexImpactFactor(limit) {
         filters.push(`type:article`);
     }
 
-    // Sort works by the journal's 2-year Impact Factor via OpenAlex primary_location.source.2yr_mean_citedness
     const fetchLimit = Math.max(limit * 3, 30);
     const apiUrl = `https://api.openalex.org/works?filter=${filters.join(',')}&sort=primary_location.source.2yr_mean_citedness:desc&per_page=${fetchLimit}`;
 
@@ -1043,9 +1023,9 @@ async function fetchOpenAlexImpactFactor(limit) {
             const journalName = work.primary_location?.source?.display_name || 'N/A';
             const url = work.doi || work.ids?.doi || work.id || "#";
 
-            // Extract 2-Year Journal Mean Citedness (OpenAlex equivalent to Journal Impact Factor)
-            const rawIF = work.primary_location?.source?.summary_stats?.2yr_mean_citedness;
-            const impactFactorStr = (rawIF !== undefined && rawIF !== null) ? rawIF.toFixed(2) : "N/A";
+            // Fixed bracket notation syntax for key starting with digits
+            const rawIF = work.primary_location?.source?.summary_stats?.['2yr_mean_citedness'] || work.primary_location?.source?.['2yr_mean_citedness'];
+            const impactFactorStr = (rawIF !== undefined && rawIF !== null) ? Number(rawIF).toFixed(2) : "N/A";
 
             const abstractText = getAbstractFromInvertedIndex(work.abstract_inverted_index);
             const summaryStr = extractTakeaway(abstractText);
@@ -1101,7 +1081,6 @@ async function fetchOpenAlexImpactFactor(limit) {
     }
 }
 
-// Automatically trigger search when page loads
 window.addEventListener('DOMContentLoaded', () => {
     fetchAllColumns();
 });
