@@ -22,6 +22,10 @@
             --amber: #92600F;
             --amber-light: #FBF1DC;
             --amber-line: #C98A24;
+            --oa: #1B7A43;
+            --oa-light: #E6F4EA;
+            --study: #8C3B54;
+            --study-light: #F7E8EC;
             --radius-md: 6px;
             --radius-sm: 3px;
             --shadow-sm: 0 1px 2px rgba(22,33,58,0.06);
@@ -210,6 +214,16 @@
         }
         .badge.citation { background: var(--teal-light); color: var(--teal-dark); border-color: transparent; }
         .badge.journal { background: #fff; color: var(--ink); border-color: var(--line); }
+        .badge-oa {
+            background: var(--oa-light);
+            color: var(--oa);
+            border-color: transparent;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .badge-oa:hover { background: var(--oa); color: #fff; }
+        .badge-study { background: var(--study-light); color: var(--study); border-color: transparent; font-weight: 600; }
 
         .authors { font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
         .authors strong { color: var(--ink); font-weight: 600; }
@@ -265,10 +279,13 @@
         </div>
 
         <div class="filter-chips">
-            <span class="chip-label">Type:</span>
-            <button class="chip active" id="chipAll" onclick="setPaperType('all')">All</button>
-            <button class="chip" id="chipResearch" onclick="setPaperType('research')">Research</button>
-            <button class="chip" id="chipReview" onclick="setPaperType('review')">Reviews</button>
+            <span class="chip-label">Study Type:</span>
+            <button class="chip active" id="chipStudy-all" onclick="setStudyCategory('all')">All</button>
+            <button class="chip" id="chipStudy-original" onclick="setStudyCategory('original')">Original Research</button>
+            <button class="chip" id="chipStudy-review" onclick="setStudyCategory('review')">Review</button>
+            <button class="chip" id="chipStudy-sysrev" onclick="setStudyCategory('sysrev')">Systematic Review/Meta-analysis</button>
+            <button class="chip" id="chipStudy-trial" onclick="setStudyCategory('trial')">Clinical Trials</button>
+            <button class="chip" id="chipStudy-other" onclick="setStudyCategory('other')">Other</button>
         </div>
 
         <div class="filter-chips">
@@ -300,7 +317,7 @@
 </div>
 
 <script>
-let selectedPaperType = 'all';
+let selectedStudyCategory = 'all';
 let showHighImpactOnly = false;
 let lastFetchedWorks = [];
 
@@ -455,11 +472,40 @@ function buildSearchQuery(rawQuery) {
     return tokens.map(buildTokenQuery).join(' AND ');
 }
 
-function setPaperType(type) {
-    selectedPaperType = type;
-    document.getElementById('chipAll').classList.toggle('active', type === 'all');
-    document.getElementById('chipResearch').classList.toggle('active', type === 'research');
-    document.getElementById('chipReview').classList.toggle('active', type === 'review');
+// The 5-category taxonomy used for both the filter chips and the query-time restriction.
+// queryClause is a PUB_TYPE-based clause (Europe PMC's own classification, already used
+// elsewhere in this file) that narrows the search itself — so switching to "Clinical Trials"
+// actually searches for clinical trials rather than fetching 10 recent papers and hoping some
+// happen to be trials (the same fix applied earlier to the Impact Factor filter).
+const STUDY_CATEGORIES = [
+    {
+        id: 'original', label: 'Original Research',
+        queryClause: 'NOT PUB_TYPE:"Review" NOT PUB_TYPE:"Systematic Review" NOT PUB_TYPE:"Meta-Analysis" NOT PUB_TYPE:"Randomized Controlled Trial" NOT PUB_TYPE:"Controlled Clinical Trial" NOT PUB_TYPE:"Clinical Trial" NOT PUB_TYPE:"Case Reports" NOT PUB_TYPE:"Comment" NOT PUB_TYPE:"Editorial" NOT PUB_TYPE:"Letter" NOT PUB_TYPE:"Practice Guideline" NOT PUB_TYPE:"Guideline"'
+    },
+    {
+        id: 'review', label: 'Review',
+        queryClause: '(PUB_TYPE:"Review" NOT PUB_TYPE:"Systematic Review" NOT PUB_TYPE:"Meta-Analysis")'
+    },
+    {
+        id: 'sysrev', label: 'Systematic Review/Meta-analysis',
+        queryClause: '(PUB_TYPE:"Systematic Review" OR PUB_TYPE:"Meta-Analysis")'
+    },
+    {
+        id: 'trial', label: 'Clinical Trials',
+        queryClause: '(PUB_TYPE:"Randomized Controlled Trial" OR PUB_TYPE:"Controlled Clinical Trial" OR PUB_TYPE:"Clinical Trial" OR PUB_TYPE:"Clinical Trial, Phase I" OR PUB_TYPE:"Clinical Trial, Phase II" OR PUB_TYPE:"Clinical Trial, Phase III" OR PUB_TYPE:"Clinical Trial, Phase IV" OR PUB_TYPE:"Pragmatic Clinical Trial" OR PUB_TYPE:"Adaptive Clinical Trial")'
+    },
+    {
+        id: 'other', label: 'Other',
+        queryClause: '(PUB_TYPE:"Case Reports" OR PUB_TYPE:"Comment" OR PUB_TYPE:"Editorial" OR PUB_TYPE:"Letter" OR PUB_TYPE:"Practice Guideline" OR PUB_TYPE:"Guideline" OR PUB_TYPE:"News")'
+    },
+];
+
+function setStudyCategory(categoryId) {
+    selectedStudyCategory = categoryId;
+    document.getElementById('chipStudy-all').classList.toggle('active', categoryId === 'all');
+    STUDY_CATEGORIES.forEach(cat => {
+        document.getElementById(`chipStudy-${cat.id}`).classList.toggle('active', categoryId === cat.id);
+    });
     fetchArticles();
 }
 
@@ -576,6 +622,75 @@ async function fetchFullTextConclusion(source, id) {
     }
 }
 
+// Classifies a paper into one of the 5 STUDY_CATEGORIES. PubMed/Europe PMC's own pubTypeList
+// (already in the response we fetch, no extra API call) is the primary signal; title-text
+// scanning is a secondary fallback for preprints and papers with sparse/missing pubType data,
+// which is common enough in this field that pubType alone under-classifies a real chunk of
+// results. Deliberately scans the TITLE only, not the abstract — abstracts routinely use words
+// like "reviewed" or "randomized" in a methods sentence without the paper itself being that
+// study type, which would cause false positives; titles are a much more reliable signal.
+function classifyStudyCategory(work) {
+    const pubTypes = (work.pubTypeList?.pubType || []).map(t => t.toLowerCase());
+    const title = (work.title || '').toLowerCase();
+    const hasAny = (list) => pubTypes.some(pt => list.includes(pt));
+
+    const SYSREV_META = ['meta-analysis', 'systematic review'];
+    const TRIAL = [
+        'randomized controlled trial', 'controlled clinical trial', 'clinical trial',
+        'clinical trial, phase i', 'clinical trial, phase ii', 'clinical trial, phase iii', 'clinical trial, phase iv',
+        'pragmatic clinical trial', 'adaptive clinical trial',
+    ];
+    const REVIEW = ['review'];
+    const OTHER = [
+        'case reports', 'practice guideline', 'guideline', 'letter', 'comment', 'editorial', 'news',
+        'biography', 'congress', 'consensus development conference',
+        'retracted publication', 'retraction of publication', 'published erratum', 'expression of concern',
+    ];
+    const ORIGINAL_RESEARCH = [
+        'journal article', 'observational study', 'comparative study', 'multicenter study',
+        'validation study', 'cohort studies', 'case-control studies', 'evaluation study', 'twin study',
+    ];
+
+    if (hasAny(SYSREV_META) || /\bsystematic review\b/.test(title) || /\bmeta-?analys[ie]s\b/.test(title)) {
+        return 'Systematic Review/Meta-analysis';
+    }
+    if (
+        hasAny(TRIAL) ||
+        (/\brandom(?:i[sz]ed|i[sz]ation)\b/.test(title) && /\btrial\b/.test(title)) ||
+        /\brct\b/.test(title) ||
+        /\bdouble-blind\b/.test(title) ||
+        (/\bplacebo-controlled\b/.test(title) && /\btrial\b/.test(title)) ||
+        /\bphase\s+(?:i{1,3}|iv|[1-4])\s+trial\b/.test(title)
+    ) {
+        return 'Clinical Trials';
+    }
+    if (hasAny(REVIEW) || /\breview\b/.test(title)) {
+        return 'Review';
+    }
+    if (hasAny(OTHER)) {
+        return 'Other';
+    }
+    if (hasAny(ORIGINAL_RESEARCH) || pubTypes.length === 0) {
+        return 'Original Research';
+    }
+    return 'Other';
+}
+
+// Picks the most useful full-text link Europe PMC has on record for an open-access paper:
+// prefer a direct PDF (Europe PMC's own hosting first, since that link tends to be the most
+// stable), then any PDF, then any HTML full text, then whatever's first in the list.
+function getBestFullTextLink(work) {
+    const urls = work.fullTextUrlList?.fullTextUrl;
+    if (!urls || !urls.length) return null;
+    const epmcPdf = urls.find(u => u.documentStyle === 'pdf' && u.site === 'Europe_PMC');
+    if (epmcPdf) return { url: epmcPdf.url, label: 'PDF' };
+    const anyPdf = urls.find(u => u.documentStyle === 'pdf');
+    if (anyPdf) return { url: anyPdf.url, label: 'PDF' };
+    const html = urls.find(u => u.documentStyle === 'html');
+    if (html) return { url: html.url, label: 'Full text' };
+    return { url: urls[0].url, label: 'Full text' };
+}
+
 // Pulls the first author's affiliation string out of the core-format authorList.
 function getFirstAuthorAffiliation(work) {
     const authors = work.authorList && work.authorList.author;
@@ -601,29 +716,40 @@ function renderResults(works) {
     const statusDiv = document.getElementById('statusMsg');
     const resultsDiv = document.getElementById('resultsContainer');
 
-    // The API query is already scoped to known IF>10 journals when the toggle is on — this is
-    // just a safety-net double-check against the same table, in case a JOURNAL: match was loose.
+    // Both filters below restrict the query itself (see fetchArticles) — these are safety-net
+    // double-checks against the same classification logic used for the badges, so what's
+    // filtered and what's displayed can never disagree with each other.
     let displayWorks = works;
+    const activeFilters = [];
+
     if (showHighImpactOnly) {
-        displayWorks = works.filter(work => {
+        activeFilters.push('IF > 10');
+        displayWorks = displayWorks.filter(work => {
             const jif = getJournalImpactFactor(work.journalInfo?.journal?.title || '');
             return jif !== null && jif > 10;
         });
     }
 
+    if (selectedStudyCategory !== 'all') {
+        const cat = STUDY_CATEGORIES.find(c => c.id === selectedStudyCategory);
+        if (cat) {
+            activeFilters.push(cat.label);
+            displayWorks = displayWorks.filter(work => classifyStudyCategory(work) === cat.label);
+        }
+    }
+
     if (displayWorks.length === 0) {
-        statusDiv.innerText = showHighImpactOnly
-            ? "No recent articles found in journals with a confirmed impact factor above 10 for this search."
+        statusDiv.innerText = activeFilters.length
+            ? `No recent articles found matching ${activeFilters.join(' + ')} for this search.`
             : "No articles found matching your query.";
         resultsDiv.innerHTML = "";
         return;
     }
 
-    statusDiv.innerText = showHighImpactOnly
-        ? `Displaying ${displayWorks.length} most recent articles from journals with IF > 10:`
+    statusDiv.innerText = activeFilters.length
+        ? `Displaying ${displayWorks.length} most recent articles (${activeFilters.join(' + ')}):`
         : `Displaying ${displayWorks.length} articles:`;
     resultsDiv.innerHTML = "";
-
 
     displayWorks.forEach((work, idx) => {
         const titleStr = work.title ? work.title.replace(/\.$/, '') : "Untitled Paper";
@@ -642,6 +768,8 @@ function renderResults(works) {
         const conclusion = extractConclusionFromAbstract(abstractText);
         const authorList = work.authorString || 'Unknown Authors';
         const firstAuthorAff = getFirstAuthorAffiliation(work);
+        const fullTextLink = work.isOpenAccess === 'Y' ? getBestFullTextLink(work) : null;
+        const studyCategory = classifyStudyCategory(work);
 
         const cardId = `${idx}-${(work.id || '').toString()}`.replace(/[^a-zA-Z0-9-_]/g, '');
 
@@ -650,9 +778,11 @@ function renderResults(works) {
         card.innerHTML = `
             <h3 class="article-title"><a href="${url}" target="_blank" rel="noopener">${sanitizeMarkup(titleStr)}</a></h3>
             <div class="badge-row">
+                <span class="badge badge-study">${escapeHtml(studyCategory)}</span>
                 <span class="badge citation">${citations.toLocaleString()} citations</span>
                 <span class="badge journal">${escapeHtml(journalName)}</span>
                 <span class="badge">${escapeHtml(String(pubDate))}</span>
+                ${fullTextLink ? `<a href="${fullTextLink.url}" target="_blank" rel="noopener" class="badge badge-oa">Open Access · ${escapeHtml(fullTextLink.label)} ↗</a>` : ''}
             </div>
             <div class="authors"><strong>Authors:</strong> ${escapeHtml(authorList)}</div>
             <div class="authors">
@@ -689,15 +819,20 @@ async function fetchArticles() {
     const resultsDiv = document.getElementById('resultsContainer');
 
     showSkeletons();
-    statusDiv.innerText = showHighImpactOnly ? "Searching high-impact journals..." : "Searching articles...";
+    const loadingParts = [];
+    if (showHighImpactOnly) loadingParts.push("high-impact journals");
+    if (selectedStudyCategory !== 'all') {
+        const loadingCat = STUDY_CATEGORIES.find(c => c.id === selectedStudyCategory);
+        if (loadingCat) loadingParts.push(loadingCat.label.toLowerCase());
+    }
+    statusDiv.innerText = loadingParts.length ? `Searching ${loadingParts.join(' + ')}...` : "Searching articles...";
 
     // Build Europe PMC query terms, scoped to TITLE/ABSTRACT with hyphen-variant expansion
     let queryString = buildSearchQuery(query) || `(TITLE:"${query}" OR ABSTRACT:"${query}")`;
 
-    if (selectedPaperType === 'review') {
-        queryString += ' AND (PUB_TYPE:"Review" OR PUB_TYPE:"Systematic Review")';
-    } else if (selectedPaperType === 'research') {
-        queryString += ' AND PUB_TYPE:"Journal Article"';
+    if (selectedStudyCategory !== 'all') {
+        const cat = STUDY_CATEGORIES.find(c => c.id === selectedStudyCategory);
+        if (cat) queryString += ` AND ${cat.queryClause}`;
     }
 
     if (showHighImpactOnly) {
