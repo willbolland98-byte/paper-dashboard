@@ -479,6 +479,19 @@ function escapeHtml(str) {
     return str.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+// Europe PMC is inconsistent about how it delivers embedded formatting: some records give raw
+// tag characters (<i>Nras</i>), others give the same markup pre-escaped as literal entity text
+// (&lt;i&gt;galU&lt;/i&gt;) — sometimes even within the same record's different fields. A
+// <textarea> decodes entities without ever parsing its content as real elements (its content
+// model is raw text, so an embedded "<script>" would just become inert decoded text, never a
+// live tag), so this normalizes both forms to plain "<i>" characters before sanitizeMarkup runs.
+function decodeHtmlEntities(str) {
+    if (typeof str !== 'string' || !str.includes('&')) return str;
+    const el = document.createElement('textarea');
+    el.innerHTML = str;
+    return el.value;
+}
+
 // Europe PMC embeds real formatting tags in titles/abstracts (<i>Nras</i>, <sup>G12D</sup>,
 // <h4>Conclusion</h4> section headers). Blanket-escaping those turns them into visible "&lt;i&gt;"
 // junk. This walks the string, keeps a small whitelist of inline formatting tags as real HTML,
@@ -486,6 +499,7 @@ function escapeHtml(str) {
 // unrecognised can inject markup.
 function sanitizeMarkup(str) {
     if (typeof str !== 'string') return str;
+    str = decodeHtmlEntities(str);
     const allowed = ['i', 'b', 'sup', 'sub', 'u', 'em', 'strong'];
     const tagPattern = /<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g;
     let result = '';
@@ -511,7 +525,7 @@ function extractConclusionFromAbstract(abstractText) {
     if (!abstractText || !abstractText.trim()) {
         return { text: "No abstract available for this paper.", labelled: false };
     }
-    const text = abstractText.trim();
+    const text = decodeHtmlEntities(abstractText.trim());
 
     // Structured abstracts marked up with real heading tags, e.g. <h4>Conclusion</h4>...text
     const htmlHeadingMatch = text.match(/<h[1-6]>\s*(?:conclusions?(?:\s+and\s+relevance)?|summary|in conclusion)\s*<\/h[1-6]>\s*([\s\S]*?)(?:<h[1-6]>|$)/i);
