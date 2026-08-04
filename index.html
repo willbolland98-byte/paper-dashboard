@@ -7,105 +7,118 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-main: #f8fafc;
-            --bg-card: #ffffff;
-            --primary-slate: #0f172a;
-            --accent-blue: #2563eb;
-            --accent-light: #eff6ff;
-            --indigo-accent: #6366f1;
-            --indigo-light: #eef2ff;
-            --summary-bg: #faf5ff;
-            --summary-border: #8b5cf6;
-            --border-color: #e2e8f0;
-            --text-dark: #0f172a;
-            --text-muted: #64748b;
-            --radius-xl: 16px;
-            --radius-lg: 12px;
-            --radius-md: 8px;
-            --radius-sm: 6px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --ink: #16213A;
+            --ink-soft: #5B6472;
+            --paper: #F4F5F1;
+            --card: #FFFFFF;
+            --line: #DDDFD6;
+            --teal: #0F6E64;
+            --teal-dark: #0B5951;
+            --teal-light: #E4F1EF;
+            --amber: #92600F;
+            --amber-light: #FBF1DC;
+            --amber-line: #C98A24;
+            --radius-md: 6px;
+            --radius-sm: 3px;
+            --shadow-sm: 0 1px 2px rgba(22,33,58,0.06);
+            --shadow-md: 0 6px 16px -6px rgba(22,33,58,0.14);
         }
 
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-dark);
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--paper);
+            color: var(--ink);
             margin: 0;
-            padding: 32px 16px;
+            padding: 40px 16px;
             line-height: 1.5;
         }
 
         .container { max-width: 900px; margin: 0 auto; }
 
-        header { margin-bottom: 24px; }
         header .header-badge {
-            display: inline-flex;
-            align-items: center;
-            background: var(--accent-light);
-            color: var(--accent-blue);
+            display: block;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--teal);
             font-size: 11px;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 20px;
+            font-weight: 500;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            letter-spacing: 0.16em;
+            margin-bottom: 10px;
         }
 
-        h1 { color: var(--primary-slate); margin: 0 0 6px 0; font-size: 28px; font-weight: 700; }
-        .subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
+        h1 {
+            font-family: 'Source Serif 4', Georgia, serif;
+            color: var(--ink);
+            margin: 0 0 8px 0;
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+        .subtitle { color: var(--ink-soft); margin: 0; font-size: 14.5px; }
+
+        .masthead-rule {
+            height: 6px;
+            border-top: 2px solid var(--ink);
+            border-bottom: 1px solid var(--ink);
+            margin: 22px 0 28px;
+        }
 
         .search-card {
-            background: var(--bg-card);
-            border-radius: var(--radius-xl);
-            border: 1px solid var(--border-color);
+            background: var(--card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--line);
+            border-top: 3px solid var(--teal);
             box-shadow: var(--shadow-md);
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 22px 22px 20px;
+            margin-bottom: 24px;
         }
 
         .search-input-wrapper {
             display: flex;
             gap: 10px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .search-input-wrapper input {
             flex: 1;
             padding: 12px 16px;
             font-size: 15px;
-            font-family: inherit;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            background: #f8fafc;
+            font-family: 'IBM Plex Mono', monospace;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background: var(--paper);
+            color: var(--ink);
         }
 
         .search-input-wrapper input:focus {
             outline: none;
-            border-color: var(--accent-blue);
+            border-color: var(--teal);
             background: #fff;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            box-shadow: 0 0 0 3px rgba(15,110,100,0.15);
         }
 
         .btn-search {
-            padding: 12px 24px;
-            background: var(--primary-slate);
+            padding: 12px 26px;
+            background: var(--teal);
             color: white;
             border: none;
-            border-radius: var(--radius-md);
-            font-weight: 600;
+            border-radius: var(--radius-sm);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.15s;
         }
 
-        .btn-search:hover { background: var(--accent-blue); }
+        .btn-search:hover { background: var(--teal-dark); }
 
         .filter-chips {
             display: flex;
@@ -113,80 +126,126 @@
             gap: 8px;
             align-items: center;
         }
+        .filter-chips + .filter-chips { margin-top: 12px; }
 
-        .chip-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 4px; }
-
-        .chip {
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 20px;
-            background: #f1f5f9;
-            color: var(--text-muted);
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
+        .chip-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            font-weight: 500;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-right: 4px;
         }
 
-        .chip:hover { color: var(--text-dark); background: #e2e8f0; }
-        .chip.active { background: var(--accent-light); color: var(--accent-blue); border-color: var(--accent-blue); }
+        .chip {
+            padding: 6px 13px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 12.5px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            background: var(--paper);
+            color: var(--ink-soft);
+            border: 1px solid var(--line);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip:hover { color: var(--ink); border-color: var(--ink-soft); }
+        .chip.active { background: var(--teal); color: #fff; border-color: var(--teal); }
 
         .filter-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid var(--border-color);
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
         }
 
         select {
-            padding: 8px 12px;
+            padding: 9px 12px;
             font-size: 13px;
-            font-family: inherit;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            background-color: #f8fafc;
-            color: var(--text-dark);
+            font-family: 'IBM Plex Sans', sans-serif;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            background-color: var(--paper);
+            color: var(--ink);
             cursor: pointer;
         }
 
         .article-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-xl);
-            padding: 20px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--teal);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            padding: 20px 22px;
             margin-bottom: 16px;
             box-shadow: var(--shadow-sm);
+            transition: box-shadow 0.15s, border-left-color 0.15s;
         }
+        .article-card:hover { box-shadow: var(--shadow-md); border-left-color: var(--teal-dark); }
 
-        .article-title { font-size: 17px; margin: 0 0 10px 0; font-weight: 700; }
-        .article-title a { color: var(--text-dark); text-decoration: none; }
-        .article-title a:hover { color: var(--accent-blue); }
+        .article-title {
+            font-family: 'Source Serif 4', Georgia, serif;
+            font-size: 19px;
+            margin: 0 0 12px 0;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        .article-title a { color: var(--ink); text-decoration: none; }
+        .article-title a:hover { color: var(--teal); text-decoration: underline; }
 
-        .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #f1f5f9; color: var(--text-muted); }
-        .badge.citation { background: var(--accent-light); color: var(--accent-blue); }
-        .badge.journal { background: var(--indigo-light); color: var(--indigo-accent); }
+        .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .badge {
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            background: var(--paper);
+            color: var(--ink-soft);
+            border: 1px solid var(--line);
+        }
+        .badge.citation { background: var(--teal-light); color: var(--teal-dark); border-color: transparent; }
+        .badge.journal { background: #fff; color: var(--ink); border-color: var(--line); }
 
-        .authors { font-size: 13px; margin-bottom: 4px; }
+        .authors { font-size: 13px; color: var(--ink-soft); margin-bottom: 4px; }
+        .authors strong { color: var(--ink); font-weight: 600; }
+
         .paper-summary {
-            font-size: 13px;
-            line-height: 1.5;
-            background: var(--summary-bg);
-            padding: 10px 14px;
-            border-left: 3px solid var(--summary-border);
-            border-radius: 0 var(--radius-md) var(--radius-md) 0;
-            margin-top: 10px;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: var(--ink);
+            background: var(--amber-light);
+            padding: 11px 14px;
+            border-left: 3px solid var(--amber-line);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-top: 12px;
         }
+        .paper-summary strong { color: var(--amber); }
 
-        .status-msg { font-weight: 600; margin-bottom: 16px; color: var(--text-muted); font-size: 14px; }
+        .status-msg { font-family: 'IBM Plex Mono', monospace; font-weight: 500; margin-bottom: 16px; color: var(--ink-soft); font-size: 13px; }
 
-        .skeleton-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 20px; margin-bottom: 16px; }
-        .skeleton-line { height: 14px; background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 4px; margin-bottom: 10px; }
+        .skeleton-card { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 20px 22px; margin-bottom: 16px; }
+        .skeleton-line { height: 14px; background: linear-gradient(90deg, var(--paper) 25%, var(--line) 50%, var(--paper) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; border-radius: 3px; margin-bottom: 10px; }
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        @media (max-width: 640px) { .filter-row { grid-template-columns: 1fr; } }
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+            outline: 2px solid var(--teal);
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .article-card, .btn-search, .chip { transition: none; }
+            .skeleton-line { animation: none; }
+        }
+
+        @media (max-width: 640px) {
+            .filter-row { grid-template-columns: 1fr; }
+            h1 { font-size: 28px; }
+        }
     </style>
 </head>
 <body>
@@ -197,6 +256,7 @@
         <h1>Literature Search</h1>
         <p class="subtitle">Real-time search across scientific literature.</p>
     </header>
+    <div class="masthead-rule"></div>
 
     <div class="search-card">
         <div class="search-input-wrapper">
@@ -211,7 +271,7 @@
             <button class="chip" id="chipReview" onclick="setPaperType('review')">Reviews</button>
         </div>
 
-        <div class="filter-chips" style="margin-top: 10px;">
+        <div class="filter-chips">
             <span class="chip-label">Impact Factor:</span>
             <button class="chip" id="chipHighImpact" onclick="toggleImpactFilter()">IF &gt; 10 only</button>
         </div>
@@ -245,11 +305,13 @@ let showHighImpactOnly = false;
 let lastFetchedWorks = [];
 
 // Manually curated snapshot of Journal Impact Factors (Clarivate JCR has no free public API,
-// so this can't be fetched live). Figures below are from the most recent JCR release
-// (June 2026, based on 2025 citation data) where available, otherwise the latest figure found.
-// Keys are lowercase, trailing period stripped, for matching against Europe PMC's journal title.
-// This list is inevitably partial and will drift out of date — extend/update it as needed.
+// so this can't be fetched live). Figures marked "verified" were confirmed via search in Aug 2026
+// against the most recent JCR release (June 2026, 2025 citation data). The rest are general-knowledge
+// estimates and may drift — treat anything near the 10.0 threshold with some caution.
+// This list is inevitably partial: journals not listed here are excluded from "IF > 10 only"
+// (shown separately in the status message as "not yet in the impact-factor list").
 const JOURNAL_IMPACT_FACTORS = {
+    // General / multidisciplinary
     "nature": 50.5,
     "science": 44.7,
     "cell": 45.5,
@@ -257,6 +319,7 @@ const JOURNAL_IMPACT_FACTORS = {
     "nature immunology": 27.7,
     "nature reviews immunology": 54.4,
     "nature communications": 14.7,
+    "science translational medicine": 15.0,
     "cell reports": 7.5,
     "pnas": 9.4,
     "proceedings of the national academy of sciences of the united states of america": 9.4,
@@ -266,10 +329,19 @@ const JOURNAL_IMPACT_FACTORS = {
     "embo journal": 8.5,
     "embo reports": 7.2,
     "journal of clinical investigation": 12.0,
+    "jci insight": 6.5,
+    "plos biology": 7.4,
+    "plos one": 2.5,
+    "scientific reports": 3.8,
+    "bmc medicine": 7.9,
+    // Major medical
     "new england journal of medicine": 96.2,
     "lancet": 98.4,
     "the lancet": 98.4,
     "jama": 63.1,
+    "circulation": 35.5,
+    "circulation research": 16.5,
+    // Respiratory (verified via search, Aug 2026)
     "lancet respiratory medicine": 34.7,
     "the lancet. respiratory medicine": 34.7,
     "european respiratory journal": 23.8,
@@ -277,23 +349,79 @@ const JOURNAL_IMPACT_FACTORS = {
     "european respiratory review": 10.8,
     "chest": 9.8,
     "thorax": 9.1,
+    // Respiratory (estimate)
+    "respiratory research": 7.0,
+    "annals of the american thoracic society": 8.5,
+    "american journal of respiratory cell and molecular biology": 5.3,
+    "american journal of physiology-lung cellular and molecular physiology": 4.5,
+    "pediatric pulmonology": 2.9,
+    "copd": 2.5,
+    "international journal of chronic obstructive pulmonary disease": 3.1,
+    "bmc pulmonary medicine": 2.6,
+    // Immunology / allergy (verified via search, Aug 2026)
     "journal of allergy and clinical immunology": 11.2,
     "journal of allergy and clinical immunology. in practice": 7.2,
     "allergy": 12.6,
     "mucosal immunology": 7.6,
-    "american journal of respiratory cell and molecular biology": 5.3,
+    // Immunology / allergy (estimate)
+    "clinical and experimental allergy": 5.3,
+    "frontiers in immunology": 5.5,
+    "journal of immunology": 3.6,
+    "molecular immunology": 3.0,
+    "international immunopharmacology": 4.8,
+    "clinical immunology": 5.5,
+    // Virology / antiviral (estimate)
+    "journal of virology": 4.0,
+    "antiviral research": 5.4,
+    "plos pathogens": 6.8,
+    "virology": 3.0,
+    // Analytical chemistry / methods (verified via search, Aug 2026)
+    "journal of chromatography b, analytical technologies in the biomedical and life sciences": 2.8,
+    // Analytical chemistry / methods (estimate)
+    "journal of chromatography a": 4.1,
+    "analytical chemistry": 7.4,
+    // Cell signalling / biochemistry (verified via search, Aug 2026)
+    "cellular signalling": 4.7,
+    // Cell signalling / biochemistry (estimate)
+    "free radical biology and medicine": 7.1,
+    // Natural products / ethnopharmacology (estimate)
+    "journal of ethnopharmacology": 4.8,
+    "phytomedicine": 6.7,
+    "biomedicine & pharmacotherapy": 6.9,
+    "frontiers in pharmacology": 4.4,
 };
+
+// Normalizes journal titles so lookups aren't broken by punctuation differences between how
+// Europe PMC formats a title (e.g. "Journal of chromatography. B, Analytical...") and how it's
+// written in the table above.
+function normalizeJournalName(name) {
+    return name.toLowerCase().replace(/[.:,]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+const JOURNAL_IMPACT_FACTOR_INDEX = Object.fromEntries(
+    Object.entries(JOURNAL_IMPACT_FACTORS).map(([k, v]) => [normalizeJournalName(k), v])
+);
 
 function getJournalImpactFactor(journalName) {
     if (!journalName) return null;
-    const key = journalName.toLowerCase().replace(/\.$/, '').trim();
-    return Object.prototype.hasOwnProperty.call(JOURNAL_IMPACT_FACTORS, key) ? JOURNAL_IMPACT_FACTORS[key] : null;
+    const key = normalizeJournalName(journalName);
+    return Object.prototype.hasOwnProperty.call(JOURNAL_IMPACT_FACTOR_INDEX, key) ? JOURNAL_IMPACT_FACTOR_INDEX[key] : null;
+}
+
+// Europe PMC has no impact-factor field to query directly, but it does support JOURNAL:"..."
+// field-scoped search. So "IF > 10 only" restricts the search itself to the known IF>10 journals
+// from our table — filtering happens as part of the query, before the Most Recent sort runs —
+// rather than fetching 10 recent papers first and hoping any happen to be high-impact.
+function buildHighImpactJournalClause() {
+    const names = Object.entries(JOURNAL_IMPACT_FACTORS).filter(([, jif]) => jif > 10).map(([name]) => name);
+    if (!names.length) return '';
+    return `(${names.map(n => `JOURNAL:"${n}"`).join(' OR ')})`;
 }
 
 function toggleImpactFilter() {
     showHighImpactOnly = !showHighImpactOnly;
     document.getElementById('chipHighImpact').classList.toggle('active', showHighImpactOnly);
-    renderResults(lastFetchedWorks);
+    fetchArticles();
 }
 
 // "IL-33", "IL33" and "IL 33" should all be treated as the same term. Also, Europe PMC's query
@@ -447,33 +575,6 @@ function getFirstAuthorAffiliation(work) {
     return { name: first.fullName || `${first.firstName || ''} ${first.lastName || ''}`.trim(), affiliation: aff.trim() };
 }
 
-// Heuristic: an affiliation string is usually "Dept X, Institute Y, City, Country" —
-// find the segment that actually names an institution rather than a department or address.
-function extractInstituteName(affiliationStr) {
-    if (!affiliationStr) return null;
-    const parts = affiliationStr.split(/[,;]/).map(p => p.trim()).filter(Boolean);
-    const keyword = /(university|institute|college|hospital|centre|center|school|laborator|academy|foundation|EMBL|CNRS)/i;
-    const match = parts.find(p => keyword.test(p));
-    return (match || parts[0] || affiliationStr).trim();
-}
-
-// Best-effort Wikipedia summary for the institute name. Returns null if there's no matching page.
-async function fetchInstituteOverview(instituteName) {
-    if (!instituteName) return null;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-    try {
-        const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(instituteName)}`, { signal: controller.signal });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.extract || null;
-    } catch (e) {
-        return null;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
 // Robust date-desc comparator used as a client-side safety net on top of the API's own sort,
 // so "Most Recent" is guaranteed correct even for records with only a partial pubYear.
 function getComparableDate(work) {
@@ -486,27 +587,29 @@ function renderResults(works) {
     const statusDiv = document.getElementById('statusMsg');
     const resultsDiv = document.getElementById('resultsContainer');
 
+    // The API query is already scoped to known IF>10 journals when the toggle is on — this is
+    // just a safety-net double-check against the same table, in case a JOURNAL: match was loose.
     let displayWorks = works;
     if (showHighImpactOnly) {
         displayWorks = works.filter(work => {
-            const journalName = work.journalInfo?.journal?.title || '';
-            const jif = getJournalImpactFactor(journalName);
+            const jif = getJournalImpactFactor(work.journalInfo?.journal?.title || '');
             return jif !== null && jif > 10;
         });
     }
 
     if (displayWorks.length === 0) {
         statusDiv.innerText = showHighImpactOnly
-            ? "No articles from journals with a known impact factor above 10 in this result set."
+            ? "No recent articles found in journals with a confirmed impact factor above 10 for this search."
             : "No articles found matching your query.";
         resultsDiv.innerHTML = "";
         return;
     }
 
     statusDiv.innerText = showHighImpactOnly
-        ? `Displaying ${displayWorks.length} of ${works.length} articles (impact factor > 10):`
+        ? `Displaying ${displayWorks.length} most recent articles from journals with IF > 10:`
         : `Displaying ${displayWorks.length} articles:`;
     resultsDiv.innerHTML = "";
+
 
     displayWorks.forEach((work, idx) => {
         const titleStr = work.title ? work.title.replace(/\.$/, '') : "Untitled Paper";
@@ -524,9 +627,7 @@ function renderResults(works) {
         const abstractText = work.abstractText || '';
         const conclusion = extractConclusionFromAbstract(abstractText);
         const authorList = work.authorString || 'Unknown Authors';
-
         const firstAuthorAff = getFirstAuthorAffiliation(work);
-        const instituteName = firstAuthorAff ? extractInstituteName(firstAuthorAff.affiliation) : null;
 
         const cardId = `${idx}-${(work.id || '').toString()}`.replace(/[^a-zA-Z0-9-_]/g, '');
 
@@ -540,8 +641,8 @@ function renderResults(works) {
                 <span class="badge">${escapeHtml(String(pubDate))}</span>
             </div>
             <div class="authors"><strong>Authors:</strong> ${escapeHtml(authorList)}</div>
-            <div class="authors" id="institute-${cardId}">
-                <strong>First Author's Institute:</strong> ${
+            <div class="authors">
+                <strong>First Author Institute:</strong> ${
                     firstAuthorAff
                         ? escapeHtml(firstAuthorAff.affiliation)
                         : "Affiliation not available for this record."
@@ -553,22 +654,13 @@ function renderResults(works) {
         `;
         resultsDiv.appendChild(card);
 
-        // Progressive enhancement 1: for open-access papers, try to swap the abstract-based
+        // Progressive enhancement: for open-access papers, try to swap the abstract-based
         // conclusion for the real Conclusion section pulled from the full text.
         if (work.isOpenAccess === 'Y' && work.source && work.id) {
             fetchFullTextConclusion(work.source, work.id).then(fullConclusion => {
                 if (!fullConclusion) return;
                 const el = document.getElementById(`conclusion-${cardId}`);
                 if (el) el.innerHTML = `<strong>Conclusion (from full text):</strong> ${sanitizeMarkup(fullConclusion)}`;
-            });
-        }
-
-        // Progressive enhancement 2: look up a brief overview of the first author's institute.
-        if (instituteName) {
-            fetchInstituteOverview(instituteName).then(overview => {
-                const el = document.getElementById(`institute-${cardId}`);
-                if (!el || !overview) return;
-                el.innerHTML = `<strong>${escapeHtml(instituteName)}:</strong> ${escapeHtml(overview)}`;
             });
         }
     });
@@ -583,7 +675,7 @@ async function fetchArticles() {
     const resultsDiv = document.getElementById('resultsContainer');
 
     showSkeletons();
-    statusDiv.innerText = "Searching articles...";
+    statusDiv.innerText = showHighImpactOnly ? "Searching high-impact journals..." : "Searching articles...";
 
     // Build Europe PMC query terms, scoped to TITLE/ABSTRACT with hyphen-variant expansion
     let queryString = buildSearchQuery(query) || `(TITLE:"${query}" OR ABSTRACT:"${query}")`;
@@ -592,6 +684,11 @@ async function fetchArticles() {
         queryString += ' AND (PUB_TYPE:"Review" OR PUB_TYPE:"Systematic Review")';
     } else if (selectedPaperType === 'research') {
         queryString += ' AND PUB_TYPE:"Journal Article"';
+    }
+
+    if (showHighImpactOnly) {
+        const journalClause = buildHighImpactJournalClause();
+        if (journalClause) queryString += ` AND ${journalClause}`;
     }
 
     if (sortVal === 'cited2Y') {
