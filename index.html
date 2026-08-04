@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Respiratory Literature Dashboard</title>
+    <title>Literature Search</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,7 +194,7 @@
 <div class="container">
     <header>
         <div class="header-badge">Respiratory Engine</div>
-        <h1>Respiratory Literature Intelligence</h1>
+        <h1>Literature Search</h1>
         <p class="subtitle">Real-time search across scientific literature.</p>
     </header>
 
@@ -209,6 +209,11 @@
             <button class="chip active" id="chipAll" onclick="setPaperType('all')">All</button>
             <button class="chip" id="chipResearch" onclick="setPaperType('research')">Research</button>
             <button class="chip" id="chipReview" onclick="setPaperType('review')">Reviews</button>
+        </div>
+
+        <div class="filter-chips" style="margin-top: 10px;">
+            <span class="chip-label">Impact Factor:</span>
+            <button class="chip" id="chipHighImpact" onclick="toggleImpactFilter()">IF &gt; 10 only</button>
         </div>
 
         <div class="filter-row">
@@ -236,6 +241,91 @@
 
 <script>
 let selectedPaperType = 'all';
+let showHighImpactOnly = false;
+let lastFetchedWorks = [];
+
+// Manually curated snapshot of Journal Impact Factors (Clarivate JCR has no free public API,
+// so this can't be fetched live). Figures below are from the most recent JCR release
+// (June 2026, based on 2025 citation data) where available, otherwise the latest figure found.
+// Keys are lowercase, trailing period stripped, for matching against Europe PMC's journal title.
+// This list is inevitably partial and will drift out of date — extend/update it as needed.
+const JOURNAL_IMPACT_FACTORS = {
+    "nature": 50.5,
+    "science": 44.7,
+    "cell": 45.5,
+    "nature medicine": 58.7,
+    "nature immunology": 27.7,
+    "nature reviews immunology": 54.4,
+    "nature communications": 14.7,
+    "cell reports": 7.5,
+    "pnas": 9.4,
+    "proceedings of the national academy of sciences of the united states of america": 9.4,
+    "immunity": 25.5,
+    "science immunology": 17.6,
+    "journal of experimental medicine": 12.5,
+    "embo journal": 8.5,
+    "embo reports": 7.2,
+    "journal of clinical investigation": 12.0,
+    "new england journal of medicine": 96.2,
+    "lancet": 98.4,
+    "the lancet": 98.4,
+    "jama": 63.1,
+    "lancet respiratory medicine": 34.7,
+    "the lancet. respiratory medicine": 34.7,
+    "european respiratory journal": 23.8,
+    "american journal of respiratory and critical care medicine": 21.7,
+    "european respiratory review": 10.8,
+    "chest": 9.8,
+    "thorax": 9.1,
+    "journal of allergy and clinical immunology": 11.2,
+    "journal of allergy and clinical immunology. in practice": 7.2,
+    "allergy": 12.6,
+    "mucosal immunology": 7.6,
+    "american journal of respiratory cell and molecular biology": 5.3,
+};
+
+function getJournalImpactFactor(journalName) {
+    if (!journalName) return null;
+    const key = journalName.toLowerCase().replace(/\.$/, '').trim();
+    return Object.prototype.hasOwnProperty.call(JOURNAL_IMPACT_FACTORS, key) ? JOURNAL_IMPACT_FACTORS[key] : null;
+}
+
+function toggleImpactFilter() {
+    showHighImpactOnly = !showHighImpactOnly;
+    document.getElementById('chipHighImpact').classList.toggle('active', showHighImpactOnly);
+    renderResults(lastFetchedWorks);
+}
+
+// "IL-33", "IL33" and "IL 33" should all be treated as the same term. Also, Europe PMC's query
+// parser can treat a bare hyphen as a NOT operator (e.g. IL-33 unquoted risks parsing as
+// "IL, not 33"), so every variant gets wrapped in quotes to force literal phrase matching.
+function expandTermVariants(token) {
+    const variants = new Set([token]);
+    const m = token.match(/^([A-Za-z]+)-?\s?(\d[\dA-Za-z]*)$/);
+    if (m) {
+        const [, letters, rest] = m;
+        variants.add(`${letters}${rest}`);
+        variants.add(`${letters}-${rest}`);
+        variants.add(`${letters} ${rest}`);
+    }
+    return Array.from(variants);
+}
+
+// Scopes a single search token to TITLE/ABSTRACT only (so results are guaranteed relevant,
+// rather than matching stray full-text/keyword noise), across all of its spelling variants.
+function buildTokenQuery(token) {
+    const variants = expandTermVariants(token);
+    const clauses = variants.flatMap(v => [`TITLE:"${v}"`, `ABSTRACT:"${v}"`]);
+    return `(${clauses.join(' OR ')})`;
+}
+
+// Builds the full search query: each whitespace-separated word/term in the user's input must
+// appear (in some spelling variant) in the title or abstract.
+function buildSearchQuery(rawQuery) {
+    const tokens = rawQuery.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return '';
+    return tokens.map(buildTokenQuery).join(' AND ');
+}
 
 function setPaperType(type) {
     selectedPaperType = type;
@@ -256,10 +346,232 @@ function showSkeletons() {
     `).join('');
 }
 
-function extractTakeaway(abstractText) {
-    if (!abstractText || !abstractText.trim()) return "Summary unavailable for this paper.";
-    const sentences = abstractText.trim().split(/(?<=[.!?])\s+(?=[A-Z])/);
-    return sentences[sentences.length - 1] || sentences[0];
+function escapeHtml(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+// Europe PMC embeds real formatting tags in titles/abstracts (<i>Nras</i>, <sup>G12D</sup>,
+// <h4>Conclusion</h4> section headers). Blanket-escaping those turns them into visible "&lt;i&gt;"
+// junk. This walks the string, keeps a small whitelist of inline formatting tags as real HTML,
+// silently drops any other tag (keeping its inner text), and escapes everything else so nothing
+// unrecognised can inject markup.
+function sanitizeMarkup(str) {
+    if (typeof str !== 'string') return str;
+    const allowed = ['i', 'b', 'sup', 'sub', 'u', 'em', 'strong'];
+    const tagPattern = /<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g;
+    let result = '';
+    let lastIndex = 0;
+    let match;
+    while ((match = tagPattern.exec(str)) !== null) {
+        result += escapeHtml(str.slice(lastIndex, match.index));
+        const tagName = match[1].toLowerCase();
+        const isClosing = match[0].startsWith('</');
+        if (allowed.includes(tagName)) {
+            result += isClosing ? `</${tagName}>` : `<${tagName}>`;
+        }
+        lastIndex = tagPattern.lastIndex;
+    }
+    result += escapeHtml(str.slice(lastIndex));
+    return result;
+}
+
+// Pulls a conclusion out of the abstract itself: structured abstracts (BACKGROUND/METHODS/
+// RESULTS/CONCLUSION...) get their labelled CONCLUSION section; unstructured abstracts fall
+// back to their final 1-2 sentences as a proxy.
+function extractConclusionFromAbstract(abstractText) {
+    if (!abstractText || !abstractText.trim()) {
+        return { text: "No abstract available for this paper.", labelled: false };
+    }
+    const text = abstractText.trim();
+
+    // Structured abstracts marked up with real heading tags, e.g. <h4>Conclusion</h4>...text
+    const htmlHeadingMatch = text.match(/<h[1-6]>\s*(?:conclusions?(?:\s+and\s+relevance)?|summary|in conclusion)\s*<\/h[1-6]>\s*([\s\S]*?)(?:<h[1-6]>|$)/i);
+    if (htmlHeadingMatch && htmlHeadingMatch[1] && htmlHeadingMatch[1].trim().length > 15) {
+        return { text: htmlHeadingMatch[1].trim(), labelled: true };
+    }
+
+    // Plain-text structured abstracts, e.g. "CONCLUSIONS: text..."
+    const labelMatch = text.match(/(?:CONCLUSIONS?(?:\s+AND\s+RELEVANCE)?|SUMMARY|IN CONCLUSION)\s*[:.]\s*([\s\S]*?)(?:\s*[A-Z][A-Z\s]{3,}:|$)/i);
+    if (labelMatch && labelMatch[1] && labelMatch[1].trim().length > 15) {
+        return { text: labelMatch[1].trim(), labelled: true };
+    }
+
+    const sentences = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    const tail = sentences.slice(-2).join(' ').trim();
+    return { text: tail || sentences[0], labelled: false };
+}
+
+// Best-effort fetch of the real conclusion section from open-access full text (JATS XML).
+// Returns null (rather than throwing) on any failure so callers can just keep the abstract-based fallback.
+async function fetchFullTextConclusion(source, id) {
+    if (!source || !id) return null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    try {
+        const res = await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/${source}/${id}/fullTextXML`, { signal: controller.signal });
+        if (!res.ok) return null;
+        const xmlText = await res.text();
+        const doc = new DOMParser().parseFromString(xmlText, "application/xml");
+        if (doc.querySelector('parsererror')) return null;
+
+        const sections = Array.from(doc.querySelectorAll('sec'));
+        const concSection = sections.find(sec => {
+            const type = (sec.getAttribute('sec-type') || '').toLowerCase();
+            const titleEl = sec.querySelector(':scope > title');
+            const titleText = titleEl ? titleEl.textContent.toLowerCase() : '';
+            return type.includes('conclu') || titleText.includes('conclu') || titleText.includes('summary');
+        });
+        if (!concSection) return null;
+
+        const combined = Array.from(concSection.querySelectorAll('p')).map(p => p.textContent.trim()).filter(Boolean).join(' ').trim();
+        if (!combined) return null;
+        return combined.length > 600 ? combined.slice(0, 600).trim() + '…' : combined;
+    } catch (e) {
+        return null;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Pulls the first author's affiliation string out of the core-format authorList.
+function getFirstAuthorAffiliation(work) {
+    const authors = work.authorList && work.authorList.author;
+    if (!authors || !authors.length) return null;
+    const first = authors[0];
+    let aff = first.affiliation;
+    if (!aff && first.authorAffiliationDetailsList?.authorAffiliation?.length) {
+        aff = first.authorAffiliationDetailsList.authorAffiliation[0].affiliation;
+    }
+    if (!aff) return null;
+    return { name: first.fullName || `${first.firstName || ''} ${first.lastName || ''}`.trim(), affiliation: aff.trim() };
+}
+
+// Heuristic: an affiliation string is usually "Dept X, Institute Y, City, Country" —
+// find the segment that actually names an institution rather than a department or address.
+function extractInstituteName(affiliationStr) {
+    if (!affiliationStr) return null;
+    const parts = affiliationStr.split(/[,;]/).map(p => p.trim()).filter(Boolean);
+    const keyword = /(university|institute|college|hospital|centre|center|school|laborator|academy|foundation|EMBL|CNRS)/i;
+    const match = parts.find(p => keyword.test(p));
+    return (match || parts[0] || affiliationStr).trim();
+}
+
+// Best-effort Wikipedia summary for the institute name. Returns null if there's no matching page.
+async function fetchInstituteOverview(instituteName) {
+    if (!instituteName) return null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    try {
+        const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(instituteName)}`, { signal: controller.signal });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.extract || null;
+    } catch (e) {
+        return null;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+// Robust date-desc comparator used as a client-side safety net on top of the API's own sort,
+// so "Most Recent" is guaranteed correct even for records with only a partial pubYear.
+function getComparableDate(work) {
+    if (work.firstPublicationDate) return new Date(work.firstPublicationDate);
+    if (work.pubYear) return new Date(`${work.pubYear}-01-01`);
+    return new Date(0);
+}
+
+function renderResults(works) {
+    const statusDiv = document.getElementById('statusMsg');
+    const resultsDiv = document.getElementById('resultsContainer');
+
+    let displayWorks = works;
+    if (showHighImpactOnly) {
+        displayWorks = works.filter(work => {
+            const journalName = work.journalInfo?.journal?.title || '';
+            const jif = getJournalImpactFactor(journalName);
+            return jif !== null && jif > 10;
+        });
+    }
+
+    if (displayWorks.length === 0) {
+        statusDiv.innerText = showHighImpactOnly
+            ? "No articles from journals with a known impact factor above 10 in this result set."
+            : "No articles found matching your query.";
+        resultsDiv.innerHTML = "";
+        return;
+    }
+
+    statusDiv.innerText = showHighImpactOnly
+        ? `Displaying ${displayWorks.length} of ${works.length} articles (impact factor > 10):`
+        : `Displaying ${displayWorks.length} articles:`;
+    resultsDiv.innerHTML = "";
+
+    displayWorks.forEach((work, idx) => {
+        const titleStr = work.title ? work.title.replace(/\.$/, '') : "Untitled Paper";
+        const citations = work.citedByCount || 0;
+        const pubDate = work.firstPublicationDate || work.pubYear || "N/A";
+        const journalName = work.journalInfo?.journal?.title || 'Journal name unavailable';
+
+        let url = "#";
+        if (work.doi) {
+            url = `https://doi.org/${work.doi}`;
+        } else if (work.pmid) {
+            url = `https://pubmed.ncbi.nlm.nih.gov/${work.pmid}/`;
+        }
+
+        const abstractText = work.abstractText || '';
+        const conclusion = extractConclusionFromAbstract(abstractText);
+        const authorList = work.authorString || 'Unknown Authors';
+
+        const firstAuthorAff = getFirstAuthorAffiliation(work);
+        const instituteName = firstAuthorAff ? extractInstituteName(firstAuthorAff.affiliation) : null;
+
+        const cardId = `${idx}-${(work.id || '').toString()}`.replace(/[^a-zA-Z0-9-_]/g, '');
+
+        const card = document.createElement('div');
+        card.className = 'article-card';
+        card.innerHTML = `
+            <h3 class="article-title"><a href="${url}" target="_blank" rel="noopener">${sanitizeMarkup(titleStr)}</a></h3>
+            <div class="badge-row">
+                <span class="badge citation">${citations.toLocaleString()} citations</span>
+                <span class="badge journal">${escapeHtml(journalName)}</span>
+                <span class="badge">${escapeHtml(String(pubDate))}</span>
+            </div>
+            <div class="authors"><strong>Authors:</strong> ${escapeHtml(authorList)}</div>
+            <div class="authors" id="institute-${cardId}">
+                <strong>First Author's Institute:</strong> ${
+                    firstAuthorAff
+                        ? escapeHtml(firstAuthorAff.affiliation)
+                        : "Affiliation not available for this record."
+                }
+            </div>
+            <div class="paper-summary" id="conclusion-${cardId}">
+                <strong>Conclusion${conclusion.labelled ? '' : ' (from abstract)'}:</strong> ${sanitizeMarkup(conclusion.text)}
+            </div>
+        `;
+        resultsDiv.appendChild(card);
+
+        // Progressive enhancement 1: for open-access papers, try to swap the abstract-based
+        // conclusion for the real Conclusion section pulled from the full text.
+        if (work.isOpenAccess === 'Y' && work.source && work.id) {
+            fetchFullTextConclusion(work.source, work.id).then(fullConclusion => {
+                if (!fullConclusion) return;
+                const el = document.getElementById(`conclusion-${cardId}`);
+                if (el) el.innerHTML = `<strong>Conclusion (from full text):</strong> ${sanitizeMarkup(fullConclusion)}`;
+            });
+        }
+
+        // Progressive enhancement 2: look up a brief overview of the first author's institute.
+        if (instituteName) {
+            fetchInstituteOverview(instituteName).then(overview => {
+                const el = document.getElementById(`institute-${cardId}`);
+                if (!el || !overview) return;
+                el.innerHTML = `<strong>${escapeHtml(instituteName)}:</strong> ${escapeHtml(overview)}`;
+            });
+        }
+    });
 }
 
 async function fetchArticles() {
@@ -273,8 +585,8 @@ async function fetchArticles() {
     showSkeletons();
     statusDiv.innerText = "Searching articles...";
 
-    // Build Europe PMC query terms
-    let queryString = query;
+    // Build Europe PMC query terms, scoped to TITLE/ABSTRACT with hyphen-variant expansion
+    let queryString = buildSearchQuery(query) || `(TITLE:"${query}" OR ABSTRACT:"${query}")`;
 
     if (selectedPaperType === 'review') {
         queryString += ' AND (PUB_TYPE:"Review" OR PUB_TYPE:"Systematic Review")';
@@ -287,12 +599,12 @@ async function fetchArticles() {
         queryString += ` AND (PUB_YEAR:${currentYear - 2} OR PUB_YEAR:${currentYear - 1} OR PUB_YEAR:${currentYear})`;
     }
 
-    let sortParam = "P_PD_DATE desc"; // Default: Most Recent
+    let sortParam = "P_PDATE_D desc"; // Default: Most Recent (Europe PMC's field is P_PDATE_D, not P_PD_DATE)
     if (sortVal === 'cited2Y' || sortVal === 'citedAll') {
         sortParam = "CITED desc";
     }
 
-    const apiUrl = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(queryString)}&sort=${encodeURIComponent(sortParam)}&pageSize=${limit}&format=json`;
+    const apiUrl = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(queryString)}&resultType=core&sort=${encodeURIComponent(sortParam)}&pageSize=${limit}&format=json`;
 
     try {
         const res = await fetch(apiUrl);
@@ -300,46 +612,20 @@ async function fetchArticles() {
         const data = await res.json();
         const works = data.resultList?.result || [];
 
+        // Safety net: guarantee strict most-recent-first order regardless of any API quirk.
+        if (sortVal === 'recent') {
+            works.sort((a, b) => getComparableDate(b) - getComparableDate(a));
+        }
+
+        lastFetchedWorks = works;
+
         if (works.length === 0) {
             statusDiv.innerText = "No articles found matching your query.";
             resultsDiv.innerHTML = "";
             return;
         }
 
-        statusDiv.innerText = `Displaying ${works.length} articles:`;
-        resultsDiv.innerHTML = "";
-
-        works.forEach(work => {
-            const titleStr = work.title ? work.title.replace(/\.$/, '') : "Untitled Paper";
-            const citations = work.citedByCount || 0;
-            const pubDate = work.firstPublicationDate || work.pubYear || "N/A";
-            const journalName = work.journalTitle || 'Scientific Journal';
-            
-            let url = "#";
-            if (work.doi) {
-                url = `https://doi.org/${work.doi}`;
-            } else if (work.pmid) {
-                url = `https://pubmed.ncbi.nlm.nih.gov/${work.pmid}/`;
-            }
-
-            const abstractText = work.abstractText || '';
-            const summaryStr = extractTakeaway(abstractText);
-            const authorList = work.authorString || 'Unknown Authors';
-
-            const card = document.createElement('div');
-            card.className = 'article-card';
-            card.innerHTML = `
-                <h3 class="article-title"><a href="${url}" target="_blank" rel="noopener">${titleStr}</a></h3>
-                <div class="badge-row">
-                    <span class="badge citation">${citations.toLocaleString()} citations</span>
-                    <span class="badge journal">${journalName}</span>
-                    <span class="badge">${pubDate}</span>
-                </div>
-                <div class="authors"><strong>Authors:</strong> ${authorList}</div>
-                <div class="paper-summary"><strong>Takeaway:</strong> ${summaryStr}</div>
-            `;
-            resultsDiv.appendChild(card);
-        });
+        renderResults(works);
     } catch (e) {
         console.error("Fetch Error:", e);
         statusDiv.innerText = "Failed to load articles.";
